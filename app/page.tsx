@@ -5,8 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import Link from 'next/link';
 
-
-
 type Note = {
   id: string;
   content: string;
@@ -18,9 +16,38 @@ type Theme = 'neutral' | 'boy' | 'girl';
 type Mode = 'write' | 'diary';
 
 const STOPWORDS = new Set([
-  'where', 'when', 'what', 'how', 'why', 'did', 'do', 'does', 'is', 'are', 'was', 'were',
-  'i', 'my', 'the', 'a', 'an', 'to', 'for', 'of', 'in', 'on', 'at', 'last', 'pay', 'paid',
-  'keep', 'kept', 'put', 'about', 'tell', 'me',
+  'where',
+  'when',
+  'what',
+  'how',
+  'why',
+  'did',
+  'do',
+  'does',
+  'is',
+  'are',
+  'was',
+  'were',
+  'i',
+  'my',
+  'the',
+  'a',
+  'an',
+  'to',
+  'for',
+  'of',
+  'in',
+  'on',
+  'at',
+  'last',
+  'pay',
+  'paid',
+  'keep',
+  'kept',
+  'put',
+  'about',
+  'tell',
+  'me',
 ]);
 
 function extractKeywords(q: string): string[] {
@@ -96,6 +123,7 @@ export default function Home() {
     const t = window.localStorage.getItem('mm_theme');
     if (t === 'neutral' || t === 'boy' || t === 'girl') setTheme(t);
   }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem('mm_theme', theme);
@@ -198,7 +226,7 @@ export default function Home() {
     setQaMessage(null);
     setAiAnswer(null);
     setAiLoading(false);
-  
+
     if (!question.trim()) {
       setQaMessage('Type a question first.');
       return;
@@ -207,36 +235,38 @@ export default function Home() {
       setQaMessage("You don't have any notes yet.");
       return;
     }
-  
+
     const keywords = extractKeywords(question);
     if (keywords.length === 0) {
       setQaMessage('Try using keywords like "PAN", "bill", "headphones".');
       return;
     }
-  
+
     const matches = notes.filter((note) => {
       const content = note.content.toLowerCase();
       const tags = (note.tags || []).map((t) => t.toLowerCase());
-  
-      // ✅ ALL keywords must match content or tags (not just ANY)
+
+      // ALL keywords must match content or tags
       return keywords.every(
         (kw) => content.includes(kw) || tags.some((tag) => tag.includes(kw)),
       );
     });
-  
+
     if (matches.length === 0) {
       setQaMessage('Nothing found in your notes for that.');
       return;
     }
-  
+
     // show filtered matches to user
     setQaResults(matches.slice(0, 5));
-    setQaMessage(`Found ${matches.length} related entr${matches.length === 1 ? 'y' : 'ies'}.`);
-  
-    // ✅ Ask Gemini to answer only using these filtered notes
+    setQaMessage(
+      `Found ${matches.length} related entr${matches.length === 1 ? 'y' : 'ies'}.`,
+    );
+
+    // Ask Gemini to answer only using these filtered notes
     try {
       setAiLoading(true);
-  
+
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -249,7 +279,7 @@ export default function Home() {
           })),
         }),
       });
-  
+
       const data = await res.json();
       if (data.answer) {
         setAiAnswer(data.answer);
@@ -260,8 +290,6 @@ export default function Home() {
       setAiLoading(false);
     }
   };
-  
-
 
   const startEdit = (note: Note) => {
     setEditingId(note.id);
@@ -334,12 +362,13 @@ export default function Home() {
   }
 
   // Not logged in
-  // Not logged in
   if (!session) {
     return (
       <main className={`flex min-h-screen items-center justify-center ${bgClass(theme)}`}>
         <div className="bg-white shadow-xl rounded-2xl p-8 max-w-sm w-full text-center border border-slate-200">
-          <h1 className="text-3xl font-bold mb-2 tracking-tight text-slate-900">Memomate</h1>
+          <h1 className="text-3xl font-bold mb-2 tracking-tight text-slate-900">
+            Memomate
+          </h1>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-700 mb-4">
             your tiny diary brain
           </p>
@@ -366,7 +395,6 @@ export default function Home() {
     );
   }
 
-
   // Filter + paginate for diary mode
   const filteredNotes = notes.filter((n) => matchSearch(n, searchTerm));
   const totalPages = Math.max(1, Math.ceil(filteredNotes.length / PAGE_SIZE));
@@ -375,71 +403,70 @@ export default function Home() {
   const pageNotes = filteredNotes.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
-    <main className={`min-h-screen ${bgClass(theme)} pb-10`}>
-      {/* solid white so nothing looks blurred */}
+    <main className={`min-h-screen ${bgClass(theme)} pb-10 overflow-x-hidden`}>
       <div className="min-h-screen">
-
-
         {/* Header */}
-        <header className="flex items-center justify-between px-4 py-3 border-b bg-white">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-slate-900">Memomate</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800">
-              diary mode
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* decor toggle */}
-            <div className="flex items-center gap-1 text-[11px]">
-              <span className="text-gray-700">Decor:</span>
-              <button
-                onClick={() => setTheme('neutral')}
-                className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'neutral'
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-white text-gray-800 border-gray-300'
-                  }`}
-              >
-                Neutral
-              </button>
-              <button
-                onClick={() => setTheme('boy')}
-                className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'boy'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-800 border-gray-300'
-                  }`}
-              >
-                Boy
-              </button>
-              <button
-                onClick={() => setTheme('girl')}
-                className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'girl'
-                  ? 'bg-pink-600 text-white border-pink-600'
-                  : 'bg-white text-gray-800 border-gray-300'
-                  }`}
-              >
-                Girl
-              </button>
+        <header className="border-b bg-white">
+          <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold text-slate-900">Memomate</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800">
+                diary mode
+              </span>
             </div>
 
-            <span className="text-xs text-gray-800 max-w-[140px] truncate">
-              {session.user.email}
-            </span>
+            <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end">
+              {/* decor toggle */}
+              <div className="flex items-center gap-1 text-[11px]">
+                <span className="text-gray-700">Decor:</span>
+                <button
+                  onClick={() => setTheme('neutral')}
+                  className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'neutral'
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-gray-800 border-gray-300'
+                    }`}
+                >
+                  Neutral
+                </button>
+                <button
+                  onClick={() => setTheme('boy')}
+                  className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'boy'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-800 border-gray-300'
+                    }`}
+                >
+                  Boy
+                </button>
+                <button
+                  onClick={() => setTheme('girl')}
+                  className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'girl'
+                      ? 'bg-pink-600 text-white border-pink-600'
+                      : 'bg-white text-gray-800 border-gray-300'
+                    }`}
+                >
+                  Girl
+                </button>
+              </div>
 
-            <Link
-              href="/privacy"
-              className="text-[11px] text-slate-700 underline hover:text-slate-900"
-            >
-              Privacy
-            </Link>
+              <span className="text-xs text-gray-800 max-w-[90px] truncate">
+                {session.user.email}
+              </span>
 
-            <button
-              onClick={handleLogout}
-              className="text-xs px-3 py-1 rounded-full border border-gray-300 text-slate-800 bg-white hover:bg-gray-100"
-            >
-              Logout
-            </button>
+              <Link
+                href="/privacy"
+                className="text-[11px] text-slate-700 underline hover:text-slate-900"
+              >
+                Privacy
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="text-xs px-3 py-1 rounded-full border border-gray-300 text-slate-800 bg-white hover:bg-gray-100"
+              >
+                Logout
+              </button>
+            </div>
           </div>
-
         </header>
 
         <section className="max-w-4xl mx-auto p-4">
@@ -478,7 +505,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* WRITE MODE: Ask + Add only, no notes here */}
+          {/* WRITE MODE: Ask + Add only */}
           {mode === 'write' && (
             <>
               {/* Ask Memomate */}
@@ -487,8 +514,8 @@ export default function Home() {
                   Ask Memomate 🧠
                 </h3>
                 <p className="text-xs text-gray-700 mb-3">
-                  Ask from your own notes. Example: "Where is my PAN card?"
-                  "When did I pay EB bill?"
+                  Ask from your own notes. Example: &quot;Where is my PAN card?&quot;
+                  &quot;When did I pay EB bill?&quot;
                 </p>
                 <div className="flex flex-col md:flex-row gap-2 mb-2">
                   <input
@@ -528,9 +555,12 @@ export default function Home() {
                 {aiAnswer && (
                   <div className="mt-3 p-2 border rounded-lg bg-emerald-50 text-sm text-emerald-900">
                     <strong>Smart answer:</strong> {aiAnswer}
+                    <p className="mt-1 text-[11px] text-emerald-900/80">
+                      (This answer is only from your own notes. Nothing is taken from the
+                      internet.)
+                    </p>
                   </div>
                 )}
-
               </div>
 
               {/* Add note */}
@@ -539,8 +569,8 @@ export default function Home() {
                   New diary entry
                 </h3>
                 <p className="text-xs text-gray-700 mb-3">
-                  Example: "PAN card is in blue file top drawer" or
-                  "AC serviced on 5 Feb, cost 1500".
+                  Example: &quot;PAN card is in blue file top drawer&quot; or
+                  &quot;AC serviced on 5 Feb, cost 1500&quot;.
                 </p>
                 <textarea
                   className="w-full border rounded-lg px-3 py-2 text-sm mb-2 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
@@ -606,8 +636,8 @@ export default function Home() {
                 <p className="text-sm text-gray-700">Loading notes…</p>
               ) : pageNotes.length === 0 ? (
                 <p className="text-sm text-gray-700">
-                  No notes match this. Try another search or add new entries in
-                  the Write tab.
+                  No notes match this. Try another search or add new entries in the Write
+                  tab.
                 </p>
               ) : (
                 <>
