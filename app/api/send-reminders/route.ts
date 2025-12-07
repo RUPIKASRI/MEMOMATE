@@ -1,28 +1,38 @@
 // @ts-nocheck
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 
-// Node runtime for web-push
 export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Helper to create admin client safely
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    console.error("Missing Supabase env in send-reminders:", {
+      hasUrl: !!url,
+      hasKey: !!key,
+    });
+    throw new Error("Supabase admin env vars not set");
+  }
+
+  return createClient(url, key);
+}
 
 webpush.setVapidDetails(
-  "mailto:your-email@example.com", // change to your email if you want
+  "mailto:your-email@example.com",
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY as string,
   process.env.VAPID_PRIVATE_KEY as string
 );
 
 export async function POST() {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const now = new Date().toISOString();
 
-    // 1) Find due reminders (reminder_at <= now AND not done)
+    // 1) Find due reminders
     const { data: dueNotes, error: notesError } = await supabaseAdmin
       .from("notes")
       .select("id, user_id, content, reminder_at, reminder_done")
@@ -40,7 +50,7 @@ export async function POST() {
 
     const userIds = Array.from(new Set(dueNotes.map((n: any) => n.user_id)));
 
-    // 2) Get push subscriptions for those users
+    // 2) Fetch subscriptions
     const { data: subs, error: subsError } = await supabaseAdmin
       .from("push_subscriptions")
       .select("*")
@@ -54,14 +64,13 @@ export async function POST() {
       );
     }
 
-    // Group subscriptions by user_id
     const subsByUser: Record<string, any[]> = {};
     (subs || []).forEach((s: any) => {
       if (!subsByUser[s.user_id]) subsByUser[s.user_id] = [];
       subsByUser[s.user_id].push(s);
     });
 
-    // 3) Send push notifications
+    // 3) Send notifications
     const sendPromises: Promise<any>[] = [];
     const noteIdsToMarkDone: string[] = [];
 
@@ -78,7 +87,7 @@ export async function POST() {
       const payload = JSON.stringify({
         title,
         body,
-        data: { url: "/" }, // where to open when tapped
+        data: { url: "/" },
       });
 
       for (const sub of userSubs) {
@@ -94,7 +103,6 @@ export async function POST() {
           .sendNotification(pushSub as any, payload)
           .catch(async (err) => {
             console.error("Push error", err.statusCode);
-            // Remove invalid subscription
             if (err.statusCode === 410 || err.statusCode === 404) {
               await supabaseAdmin
                 .from("push_subscriptions")
@@ -111,7 +119,6 @@ export async function POST() {
 
     await Promise.all(sendPromises);
 
-    // 4) Mark reminders as done so we don't spam repeatedly
     if (noteIdsToMarkDone.length > 0) {
       await supabaseAdmin
         .from("notes")
