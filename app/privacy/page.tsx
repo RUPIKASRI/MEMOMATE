@@ -1,42 +1,26 @@
-
-
-
 export default function PrivacyPage() {
     return (
       <main className="min-h-screen bg-slate-50 text-slate-900">
         <div className="max-w-3xl mx-auto px-4 py-10">
-          <h1 className="text-3xl font-bold mb-2">Privacy & Data Safety</h1>
+          <h1 className="text-3xl font-bold mb-2">Privacy &amp; Data Safety</h1>
           <p className="text-sm text-slate-700 mb-6">
-            Memomate is designed to be your tiny private brain.
-            This page explains in simple words how your data is handled.
+            Memomate is designed to be your tiny private brain. Your notes are personal,
+            and we treat them that way.
           </p>
   
           <section className="mb-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
             <h2 className="text-lg font-semibold mb-2">1. Your notes are private</h2>
             <ul className="list-disc ml-5 text-sm text-slate-800 space-y-1">
-              <li>Every note is stored with your unique user ID from Supabase Auth.</li>
-              <li>
-                We use <strong>Row Level Security (RLS)</strong> so only you can read, edit,
-                or delete your notes.
-              </li>
-              <li>
-                Other users cannot see your notes. The app owner cannot see your notes through
-                the normal app access.
-              </li>
+              <li>Only you can see your notes when you are logged in.</li>
+              <li>Other people cannot view, edit, or delete your notes from their account.</li>
             </ul>
           </section>
   
           <section className="mb-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
             <h2 className="text-lg font-semibold mb-2">2. How your data is protected</h2>
             <ul className="list-disc ml-5 text-sm text-slate-800 space-y-1">
-              <li>Your account is secured using Google login via Supabase Auth.</li>
-              <li>
-                Only requests with your valid login token can access your notes in the database.
-              </li>
-              <li>
-                Database rules are configured so that even if someone knows a note ID, they still
-                cannot access it without being logged in as you.
-              </li>
+              <li>You sign in securely using your Google account.</li>
+              <li>Your notes are stored in a secure database and linked only to your account.</li>
             </ul>
           </section>
   
@@ -53,9 +37,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold mb-2">4. Your control</h2>
             <ul className="list-disc ml-5 text-sm text-slate-800 space-y-1">
               <li>You can edit or delete any note at any time from the diary tab.</li>
-              <li>
-                In the future, we will add an option to download or export your notes for backup.
-              </li>
+              <li>In the future, you&apos;ll be able to download or export your notes for backup.</li>
             </ul>
           </section>
   
