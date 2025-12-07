@@ -68,8 +68,10 @@ function matchSearch(note: Note, term: string) {
 }
 
 function bgClass(theme: Theme) {
-  if (theme === 'boy') return 'bg-gradient-to-br from-sky-50 via-blue-50 to-emerald-50';
-  if (theme === 'girl') return 'bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50';
+  if (theme === 'boy')
+    return 'bg-gradient-to-br from-sky-50 via-blue-50 to-emerald-50';
+  if (theme === 'girl')
+    return 'bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50';
   return 'bg-gradient-to-br from-slate-50 via-slate-100 to-emerald-50/40';
 }
 
@@ -92,7 +94,7 @@ export default function Home() {
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const [theme, setTheme] = useState<Theme>('neutral');
+  const [theme, setTheme] = useState<Theme | null>(null);
   const [mode, setMode] = useState<Mode>('write'); // 📝 vs 📖
 
   const [notes, setNotes] = useState<Note[]>([]);
@@ -117,17 +119,34 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 5;
 
+  const [hydrated, setHydrated] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // Theme from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const t = window.localStorage.getItem('mm_theme');
-    if (t === 'neutral' || t === 'boy' || t === 'girl') setTheme(t);
+    if (t === 'neutral' || t === 'boy' || t === 'girl') {
+      setTheme(t);
+    } else {
+      setTheme(null);
+    }
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem('mm_theme', theme);
+    if (theme) {
+      window.localStorage.setItem('mm_theme', theme);
+    }
   }, [theme]);
+
+  const resetTheme = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('mm_theme');
+    }
+    setTheme(null);
+  };
 
   // Session
   useEffect(() => {
@@ -215,7 +234,6 @@ export default function Home() {
       setNotes((prev) => [data as Note, ...prev]);
       setNewContent('');
       setNewTags('');
-      // stay in write mode
     }
     setSaving(false);
   };
@@ -353,6 +371,57 @@ export default function Home() {
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
 
+  // ========= RENDER =========
+
+  if (!hydrated) {
+    // avoid flicker before theme loads
+    return null;
+  }
+
+  // Theme chooser – shown once until they pick Boy / Girl / Neutral
+  if (!theme) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-white px-4">
+        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 space-y-4">
+          <h1 className="text-2xl font-semibold text-center">
+            Welcome to <span className="font-bold text-emerald-300">Memomate</span>
+          </h1>
+          <p className="text-sm text-center text-slate-300">
+            Choose your vibe. This decor will be used for your whole app.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            <button
+              onClick={() => setTheme('boy')}
+              className="rounded-2xl border border-sky-400/40 bg-gradient-to-br from-sky-900 to-slate-900 p-4 text-center shadow-md hover:scale-[1.02] active:scale-[0.99] transition"
+            >
+              <div className="text-xl mb-1">🧢</div>
+              <div className="font-semibold text-sm">Boy</div>
+            </button>
+            <button
+              onClick={() => setTheme('girl')}
+              className="rounded-2xl border border-pink-400/40 bg-gradient-to-br from-pink-900 to-violet-900 p-4 text-center shadow-md hover:scale-[1.02] active:scale-[0.99] transition"
+            >
+              <div className="text-xl mb-1">💖</div>
+              <div className="font-semibold text-sm">Girl</div>
+            </button>
+            <button
+              onClick={() => setTheme('neutral')}
+              className="rounded-2xl border border-emerald-400/40 bg-gradient-to-br from-emerald-900 to-slate-900 p-4 text-center shadow-md hover:scale-[1.02] active:scale-[0.99] transition"
+            >
+              <div className="text-xl mb-1">🌿</div>
+              <div className="font-semibold text-sm">Neutral</div>
+            </button>
+          </div>
+
+          <p className="text-[11px] text-center text-slate-400 mt-2">
+            This is saved only on this device. You can change it later.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
@@ -390,6 +459,12 @@ export default function Home() {
               Privacy &amp; data safety
             </Link>
           </p>
+          <button
+            onClick={resetTheme}
+            className="mt-2 text-[11px] text-slate-500 underline"
+          >
+            Change theme
+          </button>
         </div>
       </main>
     );
@@ -403,367 +478,424 @@ export default function Home() {
   const pageNotes = filteredNotes.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
-    <main className={`min-h-screen ${bgClass(theme)} pb-10 overflow-x-hidden`}>
-      <div className="min-h-screen">
-        {/* Header */}
-        <header className="border-b bg-white">
-          <div className="mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2 max-w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold text-slate-900">Memomate</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800">
-                diary mode
+    <main
+      className={`min-h-screen ${bgClass(theme)} pb-10 overflow-x-hidden text-slate-900`}
+    >
+      <div className="min-h-screen flex">
+        {/* SIDEBAR – tablet / laptop */}
+        <aside className="hidden sm:flex sm:flex-col sm:w-64 border-r border-slate-200/70 bg-white/80 backdrop-blur-xl">
+          <div className="px-4 py-4 border-b border-slate-200/70">
+            <div className="text-lg font-semibold">Memomate</div>
+            <div className="text-xs text-slate-600">Your tiny private brain</div>
+          </div>
+
+          <nav className="flex-1 px-3 py-4 space-y-2 text-sm">
+            <button
+              onClick={() => setMode('write')}
+              className={`w-full text-left px-3 py-2 rounded-xl transition ${
+                mode === 'write'
+                  ? 'bg-slate-900 text-white shadow'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              ✍️ Write
+            </button>
+            <button
+              onClick={() => setMode('diary')}
+              className={`w-full text-left px-3 py-2 rounded-xl transition ${
+                mode === 'diary'
+                  ? 'bg-slate-900 text-white shadow'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              📖 Diary
+            </button>
+            <Link
+              href="/privacy"
+              className="block w-full text-left px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 text-sm"
+            >
+              🔒 Privacy
+            </Link>
+          </nav>
+
+          <div className="px-4 py-3 border-t border-slate-200/70 text-xs space-y-1">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600">
+                Theme:{' '}
+                <span className="font-medium capitalize">
+                  {theme}
+                </span>
               </span>
+              <button
+                onClick={resetTheme}
+                className="underline text-slate-700"
+              >
+                Change
+              </button>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end">
-              {/* decor toggle */}
-              <div className="flex items-center gap-1 text-[11px]">
-                <span className="text-gray-700">Decor:</span>
-                <button
-                  onClick={() => setTheme('neutral')}
-                  className={`px-2 py-0.5 rounded-full border text-[10px] ${
-                    theme === 'neutral'
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-gray-800 border-gray-300'
-                  }`}
-                >
-                  Neutral
-                </button>
-                <button
-                  onClick={() => setTheme('boy')}
-                  className={`px-2 py-0.5 rounded-full border text-[10px] ${
-                    theme === 'boy'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-800 border-gray-300'
-                  }`}
-                >
-                  Boy
-                </button>
-                <button
-                  onClick={() => setTheme('girl')}
-                  className={`px-2 py-0.5 rounded-full border text-[10px] ${
-                    theme === 'girl'
-                      ? 'bg-pink-600 text-white border-pink-600'
-                      : 'bg-white text-gray-800 border-gray-300'
-                  }`}
-                >
-                  Girl
-                </button>
-              </div>
-
-              <span className="text-xs text-gray-800 max-w-[90px] truncate">
+            <div className="flex justify-between items-center">
+              <span className="truncate max-w-[120px] text-slate-600">
                 {session.user.email}
               </span>
-
-              <Link
-                href="/privacy"
-                className="text-[11px] text-slate-700 underline hover:text-slate-900"
-              >
-                Privacy
-              </Link>
-
               <button
                 onClick={handleLogout}
-                className="text-xs px-3 py-1 rounded-full border border-gray-300 text-slate-800 bg-white hover:bg-gray-100"
+                className="px-3 py-1 rounded-full border border-slate-300 bg-white text-[11px]"
               >
                 Logout
               </button>
             </div>
           </div>
-        </header>
+        </aside>
 
-        <section className="mx-auto p-4 max-w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
-          {/* small top bar with mode toggle */}
-          <div className="flex items-center justify-between mb-3">
+        {/* MOBILE TOP BAR */}
+        <div className="sm:hidden fixed top-0 inset-x-0 z-20 bg-white/90 backdrop-blur-xl border-b border-slate-200">
+          <div className="flex items-center justify-between px-4 py-2.5">
             <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-800">
+              <div className="text-base font-semibold text-slate-900">Memomate</div>
+              <div className="text-[11px] text-slate-600">
+                Your tiny private brain
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={resetTheme}
+                className="text-[11px] px-2 py-1 rounded-full border border-slate-300 bg-white"
+              >
+                {theme} 🔁
+              </button>
+              <button
+                onClick={() => setSidebarOpen((v) => !v)}
+                className="px-3 py-1 rounded-full border border-slate-300 bg-white text-sm"
+              >
+                ☰ Menu
+              </button>
+            </div>
+          </div>
+
+          {sidebarOpen && (
+            <div className="bg-white border-t border-slate-200 px-3 py-2 space-y-1 text-sm">
+              <button
+                onClick={() => {
+                  setMode('write');
+                  setSidebarOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg ${
+                  mode === 'write'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                ✍️ Write
+              </button>
+              <button
+                onClick={() => {
+                  setMode('diary');
+                  setSidebarOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg ${
+                  mode === 'diary'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                📖 Diary
+              </button>
+              <Link
+                href="/privacy"
+                onClick={() => setSidebarOpen(false)}
+                className="block w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100"
+              >
+                🔒 Privacy
+              </Link>
+              <div className="flex items-center justify-between px-2 pt-2 border-t border-slate-200 mt-1 text-[11px] text-slate-600">
+                <span className="truncate max-w-[140px]">
+                  {session.user.email}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1 rounded-full border border-slate-300 bg-white"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* MAIN CONTENT */}
+        <div className="flex-1 px-4 sm:px-8 pt-20 sm:pt-8 pb-10 w-full">
+          <div className="max-w-3xl mx-auto">
+            {/* Small heading */}
+            <div className="mb-4 hidden sm:block">
+              <p className="text-xs uppercase tracking-[0.25em] text-slate-700">
                 memomate
               </p>
               <h2 className="text-lg font-semibold text-slate-900">
                 Your tiny brain book
               </h2>
             </div>
-            {/* Write vs Diary toggle */}
-            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 text-[11px]">
-              <button
-                onClick={() => setMode('write')}
-                className={`px-3 py-1 rounded-full ${
-                  mode === 'write' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
-                }`}
-              >
-                📝 Write
-              </button>
-              <button
-                onClick={() => setMode('diary')}
-                className={`px-3 py-1 rounded-full ${
-                  mode === 'diary' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
-                }`}
-              >
-                📖 Diary
-              </button>
-            </div>
-          </div>
 
-          {errorMsg && (
-            <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {errorMsg}
-            </div>
-          )}
+            {errorMsg && (
+              <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {errorMsg}
+              </div>
+            )}
 
-          {/* WRITE MODE: Ask + Add only */}
-          {mode === 'write' && (
-            <>
-              {/* Ask Memomate */}
-              <div className="rounded-2xl border bg-white p-4 mb-4 shadow-sm">
-                <h3 className="text-sm font-semibold mb-1 text-slate-900">
-                  Ask Memomate 🧠
-                </h3>
-                <p className="text-xs text-gray-700 mb-3">
-                  Ask from your own notes. Example: &quot;Where is my PAN card?&quot;
-                  &quot;When did I pay EB bill?&quot;
-                </p>
-                <div className="flex flex-col md:flex-row gap-2 mb-2">
-                  <input
-                    className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                    placeholder="Type your question here…"
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                  />
-                  <button
-                    onClick={handleAsk}
-                    className={`px-4 py-2 rounded-full text-white text-sm shadow ${primaryBtn(
-                      theme,
-                    )}`}
-                  >
-                    Ask
-                  </button>
-                </div>
-                {qaMessage && (
-                  <p className="text-[11px] text-gray-700 mb-2">{qaMessage}</p>
-                )}
-                {qaResults.length > 0 && (
-                  <ul className="space-y-2 border-t pt-2 mt-2">
-                    {qaResults.map((note) => (
-                      <li key={note.id} className="text-sm text-slate-900">
-                        <span className="font-semibold text-xs text-slate-600">
-                          • Saved:
-                        </span>{' '}
-                        {note.content}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {aiLoading && (
-                  <p className="text-xs text-gray-800 mt-2">Thinking…</p>
-                )}
-
-                {aiAnswer && (
-                  <div className="mt-3 p-2 border rounded-lg bg-emerald-50 text-sm text-emerald-900">
-                    <strong>Smart answer:</strong> {aiAnswer}
-                    <p className="mt-1 text-[11px] text-emerald-900/80">
-                      (This answer is only from your own notes. Nothing is taken from the
-                      internet.)
-                    </p>
+            {/* WRITE MODE: Ask + Add */}
+            {mode === 'write' && (
+              <>
+                {/* Ask Memomate */}
+                <div className="rounded-2xl border bg-white p-4 mb-4 shadow-sm">
+                  <h3 className="text-sm font-semibold mb-1 text-slate-900">
+                    Ask Memomate 🧠
+                  </h3>
+                  <p className="text-xs text-gray-700 mb-3">
+                    Ask from your own notes. Example: &quot;Where is my PAN card?&quot;,
+                    &quot;When did I pay EB bill?&quot;
+                  </p>
+                  <div className="flex flex-col md:flex-row gap-2 mb-2">
+                    <input
+                      className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                      placeholder="Type your question here…"
+                      value={question}
+                      onChange={(e) => setQuestion(e.target.value)}
+                    />
+                    <button
+                      onClick={handleAsk}
+                      className={`px-4 py-2 rounded-full text-white text-sm shadow ${primaryBtn(
+                        theme,
+                      )}`}
+                    >
+                      Ask
+                    </button>
                   </div>
-                )}
-              </div>
-
-              {/* Add note */}
-              <div className="rounded-2xl border bg-white p-4 mb-4 shadow-sm">
-                <h3 className="text-sm font-semibold mb-1 text-slate-900">
-                  New diary entry
-                </h3>
-                <p className="text-xs text-gray-700 mb-3">
-                  Example: &quot;PAN card is in blue file top drawer&quot; or
-                  &quot;AC serviced on 5 Feb, cost 1500&quot;.
-                </p>
-                <textarea
-                  className="w-full border rounded-lg px-3 py-2 text-sm mb-2 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  rows={3}
-                  placeholder="Write something you don't want to forget…"
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                />
-                <input
-                  className="w-full border rounded-lg px-3 py-2 text-xs mb-2 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  placeholder="Tags (optional, comma separated, e.g. documents, bills)"
-                  value={newTags}
-                  onChange={(e) => setNewTags(e.target.value)}
-                />
-                <div className="flex justify-between items-center">
-                  <button
-                    onClick={handleAddNote}
-                    disabled={saving}
-                    className={`px-4 py-2 rounded-full text-white text-sm disabled:opacity-60 shadow ${primaryBtn(
-                      theme,
-                    )}`}
-                  >
-                    {saving ? 'Saving…' : 'Save to Memomate'}
-                  </button>
-                  <span className="text-[11px] text-gray-700">
-                    Notes are private, only you can see them.
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* DIARY MODE: notes, search, edit, delete, pages */}
-          {mode === 'diary' && (
-            <div className="rounded-2xl border bg-white p-4 shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
-                <h3 className="text-sm font-semibold text-slate-900">
-                  Your entries{' '}
-                  <span className="text-[11px] text-gray-700">
-                    ({filteredNotes.length} total)
-                  </span>
-                </h3>
-                <div className="flex items-center gap-2">
-                  <input
-                    className="border rounded-lg px-3 py-1.5 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                    placeholder="Search notes…"
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setPage(1);
-                    }}
-                  />
-                  <button
-                    onClick={fetchNotes}
-                    className="text-[11px] text-gray-700 underline"
-                  >
-                    Refresh
-                  </button>
-                </div>
-              </div>
-
-              {notesLoading ? (
-                <p className="text-sm text-gray-700">Loading notes…</p>
-              ) : pageNotes.length === 0 ? (
-                <p className="text-sm text-gray-700">
-                  No notes match this. Try another search or add new entries in the Write
-                  tab.
-                </p>
-              ) : (
-                <>
-                  <ul className="space-y-3 mb-3">
-                    {pageNotes.map((note) => {
-                      const isEditing = editingId === note.id;
-                      return (
-                        <li
-                          key={note.id}
-                          className={`border ${noteBorder(
-                            theme,
-                          )} rounded-xl px-3 py-2 text-sm shadow-sm bg-white`}
-                        >
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-[11px] text-gray-700">
-                              {new Date(note.created_at).toLocaleString()}
-                            </span>
-                            <div className="flex gap-2 text-[11px]">
-                              {isEditing ? (
-                                <>
-                                  <button
-                                    onClick={saveEdit}
-                                    disabled={editingSaving}
-                                    className="text-emerald-700 font-medium"
-                                  >
-                                    {editingSaving ? 'Saving…' : 'Save'}
-                                  </button>
-                                  <button
-                                    onClick={cancelEdit}
-                                    className="text-gray-600"
-                                  >
-                                    Cancel
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => startEdit(note)}
-                                    className="text-blue-700"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => deleteNote(note.id)}
-                                    className="text-red-600"
-                                  >
-                                    Delete
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          {isEditing ? (
-                            <>
-                              <textarea
-                                className="w-full border rounded-lg px-2 py-1 text-sm mb-1 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                rows={2}
-                                value={editingContent}
-                                onChange={(e) =>
-                                  setEditingContent(e.target.value)
-                                }
-                              />
-                              <input
-                                className="w-full border rounded-lg px-2 py-1 text-[11px] mb-1 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                placeholder="Tags (comma separated)"
-                                value={editingTags}
-                                onChange={(e) =>
-                                  setEditingTags(e.target.value)
-                                }
-                              />
-                            </>
-                          ) : (
-                            <p className="mb-1 whitespace-pre-wrap text-slate-900">
-                              {note.content}
-                            </p>
-                          )}
-
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {note.tags &&
-                              note.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-0.5 text-[10px] rounded-full bg-slate-100 text-slate-800 border border-slate-200"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                          </div>
+                  {qaMessage && (
+                    <p className="text-[11px] text-gray-700 mb-2">{qaMessage}</p>
+                  )}
+                  {qaResults.length > 0 && (
+                    <ul className="space-y-2 border-t pt-2 mt-2">
+                      {qaResults.map((note) => (
+                        <li key={note.id} className="text-sm text-slate-900">
+                          <span className="font-semibold text-xs text-slate-600">
+                            • Saved:
+                          </span>{' '}
+                          {note.content}
                         </li>
-                      );
-                    })}
-                  </ul>
+                      ))}
+                    </ul>
+                  )}
+                  {aiLoading && (
+                    <p className="text-xs text-gray-800 mt-2">Thinking…</p>
+                  )}
 
-                  {/* diary-style pagination */}
-                  <div className="flex items-center justify-between text-[11px] text-gray-700">
+                  {aiAnswer && (
+                    <div className="mt-3 p-2 border rounded-lg bg-emerald-50 text-sm text-emerald-900">
+                      <strong>Smart answer:</strong> {aiAnswer}
+                      <p className="mt-1 text-[11px] text-emerald-900/80">
+                        (This answer is only from your own notes. Nothing is taken from
+                        the internet.)
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add note */}
+                <div className="rounded-2xl border bg-white p-4 mb-4 shadow-sm">
+                  <h3 className="text-sm font-semibold mb-1 text-slate-900">
+                    New diary entry
+                  </h3>
+                  <p className="text-xs text-gray-700 mb-3">
+                    Example: &quot;PAN card is in blue file top drawer&quot; or
+                    &quot;AC serviced on 5 Feb, cost 1500&quot;.
+                  </p>
+                  <textarea
+                    className="w-full border rounded-lg px-3 py-2 text-sm mb-2 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    rows={3}
+                    placeholder="Write something you don't want to forget…"
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                  />
+                  <input
+                    className="w-full border rounded-lg px-3 py-2 text-xs mb-2 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    placeholder="Tags (optional, comma separated, e.g. documents, bills)"
+                    value={newTags}
+                    onChange={(e) => setNewTags(e.target.value)}
+                  />
+                  <div className="flex justify-between items-center">
                     <button
-                      disabled={currentPage === 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="px-3 py-1 rounded-full border border-gray-300 disabled:opacity-40 bg-white"
+                      onClick={handleAddNote}
+                      disabled={saving}
+                      className={`px-4 py-2 rounded-full text-white text-sm disabled:opacity-60 shadow ${primaryBtn(
+                        theme,
+                      )}`}
                     >
-                      ← Prev page
+                      {saving ? 'Saving…' : 'Save to Memomate'}
                     </button>
-                    <span>
-                      Page {currentPage} of {totalPages}
+                    <span className="text-[11px] text-gray-700">
+                      Notes are private, only you can see them.
                     </span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* DIARY MODE */}
+            {mode === 'diary' && (
+              <div className="rounded-2xl border bg-white p-4 shadow-sm">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Your entries{' '}
+                    <span className="text-[11px] text-gray-700">
+                      ({filteredNotes.length} total)
+                    </span>
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <input
+                      className="border rounded-lg px-3 py-1.5 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                      placeholder="Search notes…"
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setPage(1);
+                      }}
+                    />
                     <button
-                      disabled={currentPage === totalPages}
-                      onClick={() =>
-                        setPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      className="px-3 py-1 rounded-full border border-gray-300 disabled:opacity-40 bg-white"
+                      onClick={fetchNotes}
+                      className="text-[11px] text-gray-700 underline"
                     >
-                      Next page →
+                      Refresh
                     </button>
                   </div>
-                </>
-              )}
-            </div>
-          )}
-        </section>
+                </div>
+
+                {notesLoading ? (
+                  <p className="text-sm text-gray-700">Loading notes…</p>
+                ) : pageNotes.length === 0 ? (
+                  <p className="text-sm text-gray-700">
+                    No notes match this. Try another search or add new entries in the
+                    Write tab.
+                  </p>
+                ) : (
+                  <>
+                    <ul className="space-y-3 mb-3">
+                      {pageNotes.map((note) => {
+                        const isEditing = editingId === note.id;
+                        return (
+                          <li
+                            key={note.id}
+                            className={`border ${noteBorder(
+                              theme,
+                            )} rounded-xl px-3 py-2 text-sm shadow-sm bg-white`}
+                          >
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-[11px] text-gray-700">
+                                {new Date(note.created_at).toLocaleString()}
+                              </span>
+                              <div className="flex gap-2 text-[11px]">
+                                {isEditing ? (
+                                  <>
+                                    <button
+                                      onClick={saveEdit}
+                                      disabled={editingSaving}
+                                      className="text-emerald-700 font-medium"
+                                    >
+                                      {editingSaving ? 'Saving…' : 'Save'}
+                                    </button>
+                                    <button
+                                      onClick={cancelEdit}
+                                      className="text-gray-600"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => startEdit(note)}
+                                      className="text-blue-700"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => deleteNote(note.id)}
+                                      className="text-red-600"
+                                    >
+                                      Delete
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {isEditing ? (
+                              <>
+                                <textarea
+                                  className="w-full border rounded-lg px-2 py-1 text-sm mb-1 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                  rows={2}
+                                  value={editingContent}
+                                  onChange={(e) =>
+                                    setEditingContent(e.target.value)
+                                  }
+                                />
+                                <input
+                                  className="w-full border rounded-lg px-2 py-1 text-[11px] mb-1 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                  placeholder="Tags (comma separated)"
+                                  value={editingTags}
+                                  onChange={(e) =>
+                                    setEditingTags(e.target.value)
+                                  }
+                                />
+                              </>
+                            ) : (
+                              <p className="mb-1 whitespace-pre-wrap text-slate-900">
+                                {note.content}
+                              </p>
+                            )}
+
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {note.tags &&
+                                note.tags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="px-2 py-0.5 text-[10px] rounded-full bg-slate-100 text-slate-800 border border-slate-200"
+                                  >
+                                    #{tag}
+                                  </span>
+                                ))}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    {/* diary-style pagination */}
+                    <div className="flex items-center justify-between text-[11px] text-gray-700">
+                      <button
+                        disabled={currentPage === 1}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        className="px-3 py-1 rounded-full border border-gray-300 disabled:opacity-40 bg-white"
+                      >
+                        ← Prev page
+                      </button>
+                      <span>
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <button
+                        disabled={currentPage === totalPages}
+                        onClick={() =>
+                          setPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        className="px-3 py-1 rounded-full border border-gray-300 disabled:opacity-40 bg-white"
+                      >
+                        Next page →
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </main>
   );
