@@ -122,7 +122,7 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Theme from localStorage
+  // Load theme from localStorage on client
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const t = window.localStorage.getItem('mm_theme');
@@ -134,6 +134,7 @@ export default function Home() {
     setHydrated(true);
   }, []);
 
+  // Save theme whenever it changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (theme) {
@@ -195,6 +196,7 @@ export default function Home() {
   };
 
   const handleLogin = async () => {
+    if (!theme) return; // extra safety
     await supabase.auth.signInWithOAuth({ provider: 'google' });
   };
 
@@ -378,49 +380,7 @@ export default function Home() {
     return null;
   }
 
-  // Theme chooser – shown once until they pick Boy / Girl / Neutral
-  if (!theme) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-white px-4">
-        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 space-y-4">
-          <h1 className="text-2xl font-semibold text-center">
-            Welcome to <span className="font-bold text-emerald-300">Memomate</span>
-          </h1>
-          <p className="text-sm text-center text-slate-300">
-            Choose your vibe. This decor will be used for your whole app.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-            <button
-              onClick={() => setTheme('boy')}
-              className="rounded-2xl border border-sky-400/40 bg-gradient-to-br from-sky-900 to-slate-900 p-4 text-center shadow-md hover:scale-[1.02] active:scale-[0.99] transition"
-            >
-              <div className="text-xl mb-1">🧢</div>
-              <div className="font-semibold text-sm">Boy</div>
-            </button>
-            <button
-              onClick={() => setTheme('girl')}
-              className="rounded-2xl border border-pink-400/40 bg-gradient-to-br from-pink-900 to-violet-900 p-4 text-center shadow-md hover:scale-[1.02] active:scale-[0.99] transition"
-            >
-              <div className="text-xl mb-1">💖</div>
-              <div className="font-semibold text-sm">Girl</div>
-            </button>
-            <button
-              onClick={() => setTheme('neutral')}
-              className="rounded-2xl border border-emerald-400/40 bg-gradient-to-br from-emerald-900 to-slate-900 p-4 text-center shadow-md hover:scale-[1.02] active:scale-[0.99] transition"
-            >
-              <div className="text-xl mb-1">🌿</div>
-              <div className="font-semibold text-sm">Neutral</div>
-            </button>
-          </div>
-
-          <p className="text-[11px] text-center text-slate-400 mt-2">
-            This is saved only on this device. You can change it later.
-          </p>
-        </div>
-      </main>
-    );
-  }
+  const effectiveTheme: Theme = theme ?? 'neutral';
 
   if (loading) {
     return (
@@ -430,10 +390,14 @@ export default function Home() {
     );
   }
 
-  // Not logged in
+  // 🔹 NOT LOGGED IN — SHOW: 1) Theme choice, then 2) Google button
   if (!session) {
     return (
-      <main className={`flex min-h-screen items-center justify-center ${bgClass(theme)}`}>
+      <main
+        className={`flex min-h-screen items-center justify-center ${bgClass(
+          effectiveTheme,
+        )}`}
+      >
         <div className="bg-white shadow-xl rounded-2xl p-8 max-w-sm w-full text-center border border-slate-200">
           <h1 className="text-3xl font-bold mb-2 tracking-tight text-slate-900">
             Memomate
@@ -441,14 +405,66 @@ export default function Home() {
           <p className="text-xs uppercase tracking-[0.2em] text-slate-700 mb-4">
             your tiny diary brain
           </p>
-          <p className="text-sm text-gray-800 mb-6">
-            Save small things (where you kept stuff, what you paid, tiny memories)
-            and find them later fast.
+
+          {/* Step 1: Choose theme */}
+          <div className="mb-5">
+            <p className="text-xs font-semibold text-slate-800 mb-1">
+              Step 1 — Choose your vibe
+            </p>
+            <p className="text-[11px] text-slate-600 mb-2">
+              This decor is only for this device. You can change it later.
+            </p>
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <button
+                onClick={() => setTheme('boy')}
+                className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
+                  theme === 'boy'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-800 border-gray-300'
+                }`}
+              >
+                🧢 Boy
+              </button>
+              <button
+                onClick={() => setTheme('girl')}
+                className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
+                  theme === 'girl'
+                    ? 'bg-pink-600 text-white border-pink-600'
+                    : 'bg-white text-gray-800 border-gray-300'
+                }`}
+              >
+                💖 Girl
+              </button>
+              <button
+                onClick={() => setTheme('neutral')}
+                className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
+                  theme === 'neutral'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-gray-800 border-gray-300'
+                }`}
+              >
+                🌿 Neutral
+              </button>
+            </div>
+            {!theme && (
+              <p className="text-[10px] text-red-600 mt-1">
+                Please choose one option to continue.
+              </p>
+            )}
+          </div>
+
+          {/* Step 2: Google login */}
+          <p className="text-xs font-semibold text-slate-800 mb-1">
+            Step 2 — Sign in with Google
+          </p>
+          <p className="text-[11px] text-slate-600 mb-3">
+            Your notes are private, only you can see them.
           </p>
           <button
             onClick={handleLogin}
-            className={`w-full py-2.5 rounded-full text-white text-sm font-medium shadow-md ${primaryBtn(
-              theme,
+            disabled={!theme}
+            className={`w-full py-2.5 rounded-full text-white text-sm font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${primaryBtn(
+              effectiveTheme,
             )}`}
           >
             Continue with Google
@@ -459,12 +475,14 @@ export default function Home() {
               Privacy &amp; data safety
             </Link>
           </p>
-          <button
-            onClick={resetTheme}
-            className="mt-2 text-[11px] text-slate-500 underline"
-          >
-            Change theme
-          </button>
+          {theme && (
+            <button
+              onClick={resetTheme}
+              className="mt-2 text-[11px] text-slate-500 underline"
+            >
+              Change theme
+            </button>
+          )}
         </div>
       </main>
     );
@@ -479,7 +497,7 @@ export default function Home() {
 
   return (
     <main
-      className={`min-h-screen ${bgClass(theme)} pb-10 overflow-x-hidden text-slate-900`}
+      className={`min-h-screen ${bgClass(effectiveTheme)} pb-10 overflow-x-hidden text-slate-900`}
     >
       <div className="min-h-screen flex">
         {/* SIDEBAR – tablet / laptop */}
@@ -523,7 +541,7 @@ export default function Home() {
               <span className="text-slate-600">
                 Theme:{' '}
                 <span className="font-medium capitalize">
-                  {theme}
+                  {theme ?? 'neutral'}
                 </span>
               </span>
               <button
@@ -561,7 +579,7 @@ export default function Home() {
                 onClick={resetTheme}
                 className="text-[11px] px-2 py-1 rounded-full border border-slate-300 bg-white"
               >
-                {theme} 🔁
+                {(theme ?? 'neutral')} 🔁
               </button>
               <button
                 onClick={() => setSidebarOpen((v) => !v)}
@@ -655,7 +673,7 @@ export default function Home() {
                   </p>
                   <div className="flex flex-col md:flex-row gap-2 mb-2">
                     <input
-                      className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                      className="flex-1 border rounded-lg px-3 py-2 text-sm bg.white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
                       placeholder="Type your question here…"
                       value={question}
                       onChange={(e) => setQuestion(e.target.value)}
@@ -663,7 +681,7 @@ export default function Home() {
                     <button
                       onClick={handleAsk}
                       className={`px-4 py-2 rounded-full text-white text-sm shadow ${primaryBtn(
-                        theme,
+                        effectiveTheme,
                       )}`}
                     >
                       Ask
@@ -726,7 +744,7 @@ export default function Home() {
                       onClick={handleAddNote}
                       disabled={saving}
                       className={`px-4 py-2 rounded-full text-white text-sm disabled:opacity-60 shadow ${primaryBtn(
-                        theme,
+                        effectiveTheme,
                       )}`}
                     >
                       {saving ? 'Saving…' : 'Save to Memomate'}
@@ -784,7 +802,7 @@ export default function Home() {
                           <li
                             key={note.id}
                             className={`border ${noteBorder(
-                              theme,
+                              effectiveTheme,
                             )} rounded-xl px-3 py-2 text-sm shadow-sm bg-white`}
                           >
                             <div className="flex justify-between items-center mb-1">
