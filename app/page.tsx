@@ -299,6 +299,39 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Register service worker for PWA + push
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator)) return;
+
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then(() => {
+        console.log('Memomate service worker registered');
+      })
+      .catch((err) => {
+        console.error('SW registration failed:', err);
+      });
+  }, []);
+
+  // Detect existing push subscription on this device -> set notificationsEnabled
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator)) return;
+
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          setNotificationsEnabled(true);
+        }
+      } catch (err) {
+        console.error('Error checking existing push subscription', err);
+      }
+    })();
+  }, []);
+
   // Load notes when logged in
   useEffect(() => {
     if (!session) {
@@ -592,7 +625,7 @@ export default function Home() {
       .select('*')
       .single();
 
-    if (error) {
+  if (error) {
       console.error(error);
       setErrorMsg('Could not update favorite.');
       return;
@@ -692,7 +725,8 @@ export default function Home() {
     }
   };
 
-  /* ---------- ENABLE NOTIFICATIONS (SUBSCRIBE) ---------- */
+  /* ---------- ENABLE / DISABLE NOTIFICATIONS ---------- */
+
   const enableNotifications = async () => {
     if (typeof window === 'undefined') return;
     if (!session) {
@@ -704,44 +738,60 @@ export default function Home() {
       setErrorMsg('Notifications are not supported in this browser.');
       return;
     }
+    if (!('serviceWorker' in navigator)) {
+      setErrorMsg('Service workers are not supported on this device.');
+      return;
+    }
 
     try {
       setNotifLoading(true);
       setErrorMsg(null);
 
-      const permission = await Notification.requestPermission();
+      // 1) Permission
+      let permission = Notification.permission;
       if (permission !== 'granted') {
-        setErrorMsg('You blocked notifications. Enable from browser settings if needed.');
-        setNotifLoading(false);
+        permission = await Notification.requestPermission();
+      }
+      if (permission !== 'granted') {
+        setErrorMsg(
+          'Notifications are blocked in browser settings. Please allow notifications for this site.',
+        );
         return;
       }
 
+      // 2) Service worker ready
       const reg = await navigator.serviceWorker.ready;
 
-      const existingSub = await reg.pushManager.getSubscription();
-      if (existingSub) {
-        setNotificationsEnabled(true);
-        setNotifLoading(false);
-        return;
+      // 3) Existing subscription?
+      let sub = await reg.pushManager.getSubscription();
+
+      if (!sub) {
+        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!vapidPublicKey) {
+          setErrorMsg('Notifications are not configured on the server (missing VAPID key).');
+          return;
+        }
+
+        const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+
+        try {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey,
+          });
+        } catch (err: any) {
+          console.error('pushManager.subscribe error', err);
+          setErrorMsg(
+            'Failed to subscribe for push. Check if notifications are allowed for this site in browser settings.',
+          );
+          return;
+        }
       }
-
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        setErrorMsg('Notifications are not configured on server.');
-        setNotifLoading(false);
-        return;
-      }
-
-      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey,
-      });
 
       const subJson = sub.toJSON() as PushSubscriptionJSON;
 
-      await fetch('/api/subscribe', {
+      // 4) Send subscription to backend
+      const resp = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -750,10 +800,50 @@ export default function Home() {
         }),
       });
 
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        console.error('subscribe API error', data);
+        setErrorMsg('Failed to save notification subscription on server.');
+        return;
+      }
+
+      // ✅ All good
       setNotificationsEnabled(true);
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('Failed to enable notifications.');
+    } catch (err: any) {
+      console.error('enableNotifications error', err);
+      setErrorMsg(
+        'Failed to enable notifications: ' + (err?.message || 'Unknown error'),
+      );
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  const disableNotifications = async () => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      setNotifLoading(true);
+      setErrorMsg(null);
+
+      if (!('serviceWorker' in navigator)) {
+        setErrorMsg('Service workers are not supported on this device.');
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+
+      if (sub) {
+        await sub.unsubscribe();
+      }
+
+      setNotificationsEnabled(false);
+    } catch (err: any) {
+      console.error('disableNotifications error', err);
+      setErrorMsg(
+        'Failed to turn off notifications on this device. You can also disable from browser site settings.',
+      );
     } finally {
       setNotifLoading(false);
     }
@@ -1160,23 +1250,27 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Enable notifications button */}
+                  {/* Enable/Disable notifications toggle */}
                   <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <button
                       type="button"
-                      onClick={enableNotifications}
-                      disabled={notifLoading || notificationsEnabled}
+                      onClick={
+                        notificationsEnabled
+                          ? disableNotifications
+                          : enableNotifications
+                      }
+                      disabled={notifLoading}
                       className="text-[11px] px-3 py-1 rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60"
                     >
-                      {notificationsEnabled
-                        ? '🔔 Notifications enabled on this device'
-                        : notifLoading
-                        ? 'Enabling notifications…'
+                      {notifLoading
+                        ? 'Updating…'
+                        : notificationsEnabled
+                        ? '🔕 Turn off notifications on this device'
                         : '🔔 Enable reminder notifications on this device'}
                     </button>
                     <span className="text-[10px] text-slate-500 text-right">
-                      This registers your device for reminders. Background push needs
-                      server + cron (already being wired).
+                      This only affects this device. You can enable or turn off reminders
+                      per device anytime.
                     </span>
                   </div>
 
