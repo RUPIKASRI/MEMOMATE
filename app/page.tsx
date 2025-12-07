@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
+import Link from 'next/link';
+
 
 type Note = {
   id: string;
@@ -15,9 +17,9 @@ type Theme = 'neutral' | 'boy' | 'girl';
 type Mode = 'write' | 'diary';
 
 const STOPWORDS = new Set([
-  'where','when','what','how','why','did','do','does','is','are','was','were',
-  'i','my','the','a','an','to','for','of','in','on','at','last','pay','paid',
-  'keep','kept','put','about','tell','me',
+  'where', 'when', 'what', 'how', 'why', 'did', 'do', 'does', 'is', 'are', 'was', 'were',
+  'i', 'my', 'the', 'a', 'an', 'to', 'for', 'of', 'in', 'on', 'at', 'last', 'pay', 'paid',
+  'keep', 'kept', 'put', 'about', 'tell', 'me',
 ]);
 
 function extractKeywords(q: string): string[] {
@@ -293,6 +295,7 @@ export default function Home() {
   }
 
   // Not logged in
+  // Not logged in
   if (!session) {
     return (
       <main className={`flex min-h-screen items-center justify-center ${bgClass(theme)}`}>
@@ -313,10 +316,17 @@ export default function Home() {
           >
             Continue with Google
           </button>
+
+          <p className="mt-4 text-[11px] text-slate-600">
+            <Link href="/privacy" className="underline">
+              Privacy &amp; data safety
+            </Link>
+          </p>
         </div>
       </main>
     );
   }
+
 
   // Filter + paginate for diary mode
   const filteredNotes = notes.filter((n) => matchSearch(n, searchTerm));
@@ -345,38 +355,44 @@ export default function Home() {
               <span className="text-gray-700">Decor:</span>
               <button
                 onClick={() => setTheme('neutral')}
-                className={`px-2 py-0.5 rounded-full border text-[10px] ${
-                  theme === 'neutral'
+                className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'neutral'
                     ? 'bg-slate-900 text-white border-slate-900'
                     : 'bg-white text-gray-800 border-gray-300'
-                }`}
+                  }`}
               >
                 Neutral
               </button>
               <button
                 onClick={() => setTheme('boy')}
-                className={`px-2 py-0.5 rounded-full border text-[10px] ${
-                  theme === 'boy'
+                className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'boy'
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-white text-gray-800 border-gray-300'
-                }`}
+                  }`}
               >
                 Boy
               </button>
               <button
                 onClick={() => setTheme('girl')}
-                className={`px-2 py-0.5 rounded-full border text-[10px] ${
-                  theme === 'girl'
+                className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'girl'
                     ? 'bg-pink-600 text-white border-pink-600'
                     : 'bg-white text-gray-800 border-gray-300'
-                }`}
+                  }`}
               >
                 Girl
               </button>
             </div>
+
             <span className="text-xs text-gray-800 max-w-[140px] truncate">
               {session.user.email}
             </span>
+
+            <Link
+              href="/privacy"
+              className="text-[11px] text-slate-700 underline hover:text-slate-900"
+            >
+              Privacy
+            </Link>
+
             <button
               onClick={handleLogout}
               className="text-xs px-3 py-1 rounded-full border border-gray-300 text-slate-800 bg-white hover:bg-gray-100"
@@ -384,6 +400,7 @@ export default function Home() {
               Logout
             </button>
           </div>
+
         </header>
 
         <section className="max-w-4xl mx-auto p-4">
@@ -401,17 +418,15 @@ export default function Home() {
             <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 text-[11px]">
               <button
                 onClick={() => setMode('write')}
-                className={`px-3 py-1 rounded-full ${
-                  mode === 'write' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
-                }`}
+                className={`px-3 py-1 rounded-full ${mode === 'write' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
+                  }`}
               >
                 📝 Write
               </button>
               <button
                 onClick={() => setMode('diary')}
-                className={`px-3 py-1 rounded-full ${
-                  mode === 'diary' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
-                }`}
+                className={`px-3 py-1 rounded-full ${mode === 'diary' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
+                  }`}
               >
                 📖 Diary
               </button>
