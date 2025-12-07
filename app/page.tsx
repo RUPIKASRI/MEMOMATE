@@ -407,7 +407,7 @@ export default function Home() {
       <div className="min-h-screen">
         {/* Header */}
         <header className="border-b bg-white">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2 max-w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
             <div className="flex items-center gap-2">
               <span className="text-lg font-semibold text-slate-900">Memomate</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800">
@@ -472,7 +472,7 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="max-w-4xl mx-auto p-4">
+        <section className="mx-auto p-4 max-w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
           {/* small top bar with mode toggle */}
           <div className="flex items-center justify-between mb-3">
             <div>
