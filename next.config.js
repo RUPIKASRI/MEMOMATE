@@ -4,7 +4,11 @@ const withPWA = require("next-pwa")({
     skipWaiting: true,
   });
   
-  module.exports = withPWA({
+  /** @type {import('next').NextConfig} */
+  const nextConfig = {
     reactStrictMode: true,
-  });
+    turbopack: {}, // harmless, just silences turbopack warning if Next looks for it
+  };
+  
+  module.exports = withPWA(nextConfig);
   
