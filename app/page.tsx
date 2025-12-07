@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import Link from 'next/link';
@@ -10,6 +10,8 @@ type Note = {
   content: string;
   tags: string[] | null;
   created_at: string;
+  pinned: boolean;
+  favorite: boolean;
 };
 
 type Theme = 'neutral' | 'boy' | 'girl';
@@ -87,6 +89,63 @@ function noteBorder(theme: Theme) {
   return 'border-emerald-300';
 }
 
+/* ---------- STREAK HELPERS ---------- */
+
+function dateKeyLocal(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function calculateStreaks(notes: Note[]): { current: number; longest: number } {
+  if (!notes.length) return { current: 0, longest: 0 };
+
+  const daySet = new Set<string>();
+  for (const n of notes) {
+    const d = new Date(n.created_at);
+    daySet.add(dateKeyLocal(d));
+  }
+  if (daySet.size === 0) return { current: 0, longest: 0 };
+
+  const allDays = Array.from(daySet).sort(); // ascending
+
+  // Longest streak
+  let longest = 1;
+  let currentRun = 1;
+  for (let i = 1; i < allDays.length; i++) {
+    const prev = new Date(allDays[i - 1]);
+    const curr = new Date(allDays[i]);
+    const diff =
+      (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
+    if (diff === 1) {
+      currentRun++;
+      if (currentRun > longest) longest = currentRun;
+    } else {
+      currentRun = 1;
+    }
+  }
+
+  // Current streak up to today
+  let current = 0;
+  const today = new Date();
+  let cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate()); // local midnight
+
+  while (true) {
+    const key = dateKeyLocal(cursor);
+    if (daySet.has(key)) {
+      current++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  return { current, longest };
+}
+
+/* ---------- PAGE COMPONENT ---------- */
+
 export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,7 +154,7 @@ export default function Home() {
   const [aiLoading, setAiLoading] = useState(false);
 
   const [theme, setTheme] = useState<Theme | null>(null);
-  const [themeLocked, setThemeLocked] = useState(false); // 👈 once true, user can’t change
+  const [themeLocked, setThemeLocked] = useState(false);
   const [mode, setMode] = useState<Mode>('write');
 
   const [notes, setNotes] = useState<Note[]>([]);
@@ -122,6 +181,13 @@ export default function Home() {
 
   const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Streaks (computed from notes)
+  const { current: currentStreak, longest: longestStreak } = useMemo(
+    () => calculateStreaks(notes),
+    [notes],
+  );
 
   // Load theme from localStorage on client
   useEffect(() => {
@@ -129,14 +195,13 @@ export default function Home() {
     const t = window.localStorage.getItem('mm_theme');
     if (t === 'neutral' || t === 'boy' || t === 'girl') {
       setTheme(t);
-      setThemeLocked(true); // 👈 already chosen earlier
+      setThemeLocked(true);
     }
     setHydrated(true);
   }, []);
 
-  // one-time choose & lock
   const chooseTheme = (t: Theme) => {
-    if (themeLocked) return; // 👈 ignore clicks if already chosen
+    if (themeLocked) return;
     setTheme(t);
     setThemeLocked(true);
     if (typeof window !== 'undefined') {
@@ -179,19 +244,25 @@ export default function Home() {
       .from('notes')
       .select('*')
       .eq('user_id', session.user.id)
+      .order('pinned', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) {
       console.error(error);
       setErrorMsg('Failed to load notes.');
     } else {
-      setNotes((data as Note[]) ?? []);
+      const list = (data as Note[]).map((n) => ({
+        ...n,
+        pinned: !!n.pinned,
+        favorite: !!n.favorite,
+      }));
+      setNotes(list);
       setPage(1);
     }
     setNotesLoading(false);
   };
 
   const handleLogin = async () => {
-    if (!theme) return; // extra safety
+    if (!theme) return;
     await supabase.auth.signInWithOAuth({ provider: 'google' });
   };
 
@@ -228,7 +299,11 @@ export default function Home() {
       console.error(error);
       setErrorMsg('Could not save note.');
     } else if (data) {
-      setNotes((prev) => [data as Note, ...prev]);
+      const note = data as Note;
+      setNotes((prev) => [
+        { ...note, pinned: !!note.pinned, favorite: !!note.favorite },
+        ...prev,
+      ]);
       setNewContent('');
       setNewTags('');
     }
@@ -345,7 +420,18 @@ export default function Home() {
       console.error(error);
       setErrorMsg('Could not update note.');
     } else if (data) {
-      setNotes((prev) => prev.map((n) => (n.id === editingId ? (data as Note) : n)));
+      const updated = data as Note;
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === editingId
+            ? {
+                ...updated,
+                pinned: !!updated.pinned,
+                favorite: !!updated.favorite,
+              }
+            : n,
+        ),
+      );
       cancelEdit();
     }
     setEditingSaving(false);
@@ -364,6 +450,72 @@ export default function Home() {
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
 
+  const togglePin = async (note: Note) => {
+    const { data, error } = await supabase
+      .from('notes')
+      .update({ pinned: !note.pinned })
+      .eq('id', note.id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(error);
+      setErrorMsg('Could not update pin.');
+      return;
+    }
+
+    const updated = data as Note;
+    setNotes((prev) =>
+      prev
+        .map((n) =>
+          n.id === note.id
+            ? {
+                ...updated,
+                pinned: !!updated.pinned,
+                favorite: !!updated.favorite,
+              }
+            : n,
+        )
+        .sort((a, b) => {
+          if (a.pinned === b.pinned) {
+            return (
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime()
+            );
+          }
+          return a.pinned ? -1 : 1;
+        }),
+    );
+  };
+
+  const toggleFavorite = async (note: Note) => {
+    const { data, error } = await supabase
+      .from('notes')
+      .update({ favorite: !note.favorite })
+      .eq('id', note.id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(error);
+      setErrorMsg('Could not update favorite.');
+      return;
+    }
+
+    const updated = data as Note;
+    setNotes((prev) =>
+      prev.map((n) =>
+        n.id === note.id
+          ? {
+              ...updated,
+              pinned: !!updated.pinned,
+              favorite: !!updated.favorite,
+            }
+          : n,
+      ),
+    );
+  };
+
   // ========= RENDER =========
 
   if (!hydrated) {
@@ -380,7 +532,7 @@ export default function Home() {
     );
   }
 
-  // NOT LOGGED IN – theme first, then Google login
+  // NOT LOGGED IN
   if (!session) {
     return (
       <main
@@ -396,7 +548,6 @@ export default function Home() {
             your tiny diary brain
           </p>
 
-          {/* Step 1: Choose theme (only if not locked) */}
           <div className="mb-5">
             <p className="text-xs font-semibold text-slate-800 mb-1">
               Step 1 — Choose your vibe
@@ -453,7 +604,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Step 2: Google login */}
           <p className="text-xs font-semibold text-slate-800 mb-1">
             Step 2 — Sign in with Google
           </p>
@@ -480,8 +630,9 @@ export default function Home() {
     );
   }
 
-  // Filter + paginate for diary mode
-  const filteredNotes = notes.filter((n) => matchSearch(n, searchTerm));
+  // Filter + paginate
+  const baseNotes = showFavoritesOnly ? notes.filter((n) => n.favorite) : notes;
+  const filteredNotes = baseNotes.filter((n) => matchSearch(n, searchTerm));
   const totalPages = Math.max(1, Math.ceil(filteredNotes.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
@@ -626,14 +777,28 @@ export default function Home() {
         {/* MAIN CONTENT */}
         <div className="flex-1 px-4 sm:px-8 pt-20 sm:pt-8 pb-10 w-full">
           <div className="max-w-3xl mx-auto">
-            {/* Small heading */}
-            <div className="mb-4 hidden sm:block">
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-700">
-                memomate
-              </p>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Your tiny brain book
-              </h2>
+            {/* Heading + streak (desktop) */}
+            <div className="mb-4 hidden sm:flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-700">
+                  memomate
+                </p>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Your tiny brain book
+                </h2>
+              </div>
+              <div className="flex flex-col items-end text-[11px]">
+                <div className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800">
+                  Streak:{' '}
+                  <span className="font-semibold">{currentStreak}</span> day
+                  {currentStreak === 1 ? '' : 's'} 🔥
+                </div>
+                <div className="mt-1 text-slate-600">
+                  Best:{' '}
+                  <span className="font-semibold">{longestStreak}</span> day
+                  {longestStreak === 1 ? '' : 's'}
+                </div>
+              </div>
             </div>
 
             {errorMsg && (
@@ -743,14 +908,49 @@ export default function Home() {
             {/* DIARY MODE */}
             {mode === 'diary' && (
               <div className="rounded-2xl border bg-white p-4 shadow-sm">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Your entries{' '}
-                    <span className="text-[11px] text-gray-700">
-                      ({filteredNotes.length} total)
-                    </span>
-                  </h3>
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      Your entries{' '}
+                      <span className="text-[11px] text-gray-700">
+                        ({filteredNotes.length} shown)
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-600">
+                      {showFavoritesOnly
+                        ? 'Showing only favorites.'
+                        : 'Showing all entries.'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 text-[11px] overflow-hidden">
+                      <button
+                        onClick={() => {
+                          setShowFavoritesOnly(false);
+                          setPage(1);
+                        }}
+                        className={`px-3 py-1 ${
+                          !showFavoritesOnly
+                            ? 'bg-white shadow text-slate-900'
+                            : 'text-slate-600'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowFavoritesOnly(true);
+                          setPage(1);
+                        }}
+                        className={`px-3 py-1 ${
+                          showFavoritesOnly
+                            ? 'bg-white shadow text-slate-900'
+                            : 'text-slate-600'
+                        }`}
+                      >
+                        ❤️ Favorites
+                      </button>
+                    </div>
                     <input
                       className="border rounded-lg px-3 py-1.5 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
                       placeholder="Search notes…"
@@ -788,11 +988,40 @@ export default function Home() {
                               effectiveTheme,
                             )} rounded-xl px-3 py-2 text-sm shadow-sm bg-white`}
                           >
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-[11px] text-gray-700">
-                                {new Date(note.created_at).toLocaleString()}
-                              </span>
-                              <div className="flex gap-2 text-[11px]">
+                            <div className="flex justify-between items-start mb-1 gap-2">
+                              <div className="flex flex-col">
+                                <span className="text-[11px] text-gray-700">
+                                  {new Date(note.created_at).toLocaleString()}
+                                </span>
+                                {note.pinned && (
+                                  <span className="text-[10px] text-amber-700">
+                                    📌 Pinned
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex gap-2 text-[11px] items-center">
+                                <button
+                                  onClick={() => toggleFavorite(note)}
+                                  className={
+                                    note.favorite
+                                      ? 'text-red-600'
+                                      : 'text-slate-500 hover:text-red-500'
+                                  }
+                                  title="Favorite"
+                                >
+                                  {note.favorite ? '❤️' : '♡'}
+                                </button>
+                                <button
+                                  onClick={() => togglePin(note)}
+                                  className={
+                                    note.pinned
+                                      ? 'text-amber-700'
+                                      : 'text-slate-500 hover:text-amber-700'
+                                  }
+                                  title="Pin on top"
+                                >
+                                  📌
+                                </button>
                                 {isEditing ? (
                                   <>
                                     <button
