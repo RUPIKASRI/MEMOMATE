@@ -161,6 +161,14 @@ function toInputDateTime(value: string | null): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+// Convert datetime-local value (no timezone) → ISO with timezone (UTC)
+function inputToISOString(value: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
 function formatReadable(value: string): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
@@ -323,7 +331,7 @@ export default function Home() {
         .map((t) => t.trim())
         .filter(Boolean) || [];
 
-    const reminderValue = newReminder || null;
+    const reminderValue = inputToISOString(newReminder); // ✅ timezone-safe
 
     const { data, error } = await supabase
       .from('notes')
@@ -457,7 +465,7 @@ export default function Home() {
         .map((t) => t.trim())
         .filter(Boolean) || [];
 
-    const reminderValue = editingReminder || null;
+    const reminderValue = inputToISOString(editingReminder); // ✅ timezone-safe
 
     const { data, error } = await supabase
       .from('notes')
@@ -465,7 +473,7 @@ export default function Home() {
         content: editingContent.trim(),
         tags: tagsArray,
         reminder_at: reminderValue,
-        reminder_done: false, // reset when editing
+        reminder_done: false, // reset when editing reminder
       })
       .eq('id', editingId)
       .select('*')
@@ -628,7 +636,6 @@ export default function Home() {
 
     recog.onstart = () => {
       setIsRecording(true);
-      // Clear any old error
       setErrorMsg(null);
     };
 
