@@ -95,7 +95,8 @@ export default function Home() {
   const [aiLoading, setAiLoading] = useState(false);
 
   const [theme, setTheme] = useState<Theme | null>(null);
-  const [mode, setMode] = useState<Mode>('write'); // 📝 vs 📖
+  const [themeLocked, setThemeLocked] = useState(false); // 👈 once true, user can’t change
+  const [mode, setMode] = useState<Mode>('write');
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
@@ -128,25 +129,19 @@ export default function Home() {
     const t = window.localStorage.getItem('mm_theme');
     if (t === 'neutral' || t === 'boy' || t === 'girl') {
       setTheme(t);
-    } else {
-      setTheme(null);
+      setThemeLocked(true); // 👈 already chosen earlier
     }
     setHydrated(true);
   }, []);
 
-  // Save theme whenever it changes
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (theme) {
-      window.localStorage.setItem('mm_theme', theme);
-    }
-  }, [theme]);
-
-  const resetTheme = () => {
+  // one-time choose & lock
+  const chooseTheme = (t: Theme) => {
+    if (themeLocked) return; // 👈 ignore clicks if already chosen
+    setTheme(t);
+    setThemeLocked(true);
     if (typeof window !== 'undefined') {
-      window.localStorage.removeItem('mm_theme');
+      window.localStorage.setItem('mm_theme', t);
     }
-    setTheme(null);
   };
 
   // Session
@@ -241,7 +236,6 @@ export default function Home() {
   };
 
   const handleAsk = async () => {
-    // reset previous state
     setQaResults([]);
     setQaMessage(null);
     setAiAnswer(null);
@@ -266,7 +260,6 @@ export default function Home() {
       const content = note.content.toLowerCase();
       const tags = (note.tags || []).map((t) => t.toLowerCase());
 
-      // ALL keywords must match content or tags
       return keywords.every(
         (kw) => content.includes(kw) || tags.some((tag) => tag.includes(kw)),
       );
@@ -277,13 +270,11 @@ export default function Home() {
       return;
     }
 
-    // show filtered matches to user
     setQaResults(matches.slice(0, 5));
     setQaMessage(
       `Found ${matches.length} related entr${matches.length === 1 ? 'y' : 'ies'}.`,
     );
 
-    // Ask Gemini to answer only using these filtered notes
     try {
       setAiLoading(true);
 
@@ -376,7 +367,6 @@ export default function Home() {
   // ========= RENDER =========
 
   if (!hydrated) {
-    // avoid flicker before theme loads
     return null;
   }
 
@@ -390,7 +380,7 @@ export default function Home() {
     );
   }
 
-  // 🔹 NOT LOGGED IN — SHOW: 1) Theme choice, then 2) Google button
+  // NOT LOGGED IN – theme first, then Google login
   if (!session) {
     return (
       <main
@@ -406,49 +396,59 @@ export default function Home() {
             your tiny diary brain
           </p>
 
-          {/* Step 1: Choose theme */}
+          {/* Step 1: Choose theme (only if not locked) */}
           <div className="mb-5">
             <p className="text-xs font-semibold text-slate-800 mb-1">
               Step 1 — Choose your vibe
             </p>
-            <p className="text-[11px] text-slate-600 mb-2">
-              This decor is only for this device. You can change it later.
-            </p>
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <button
-                onClick={() => setTheme('boy')}
-                className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
-                  theme === 'boy'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-800 border-gray-300'
-                }`}
-              >
-                🧢 Boy
-              </button>
-              <button
-                onClick={() => setTheme('girl')}
-                className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
-                  theme === 'girl'
-                    ? 'bg-pink-600 text-white border-pink-600'
-                    : 'bg-white text-gray-800 border-gray-300'
-                }`}
-              >
-                💖 Girl
-              </button>
-              <button
-                onClick={() => setTheme('neutral')}
-                className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
-                  theme === 'neutral'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white text-gray-800 border-gray-300'
-                }`}
-              >
-                🌿 Neutral
-              </button>
-            </div>
-            {!theme && (
-              <p className="text-[10px] text-red-600 mt-1">
-                Please choose one option to continue.
+            {!themeLocked ? (
+              <>
+                <p className="text-[11px] text-slate-600 mb-2">
+                  This decor is fixed for this device after you choose.
+                </p>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <button
+                    onClick={() => chooseTheme('boy')}
+                    className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
+                      theme === 'boy'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-800 border-gray-300'
+                    }`}
+                  >
+                    🧢 Boy
+                  </button>
+                  <button
+                    onClick={() => chooseTheme('girl')}
+                    className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
+                      theme === 'girl'
+                        ? 'bg-pink-600 text-white border-pink-600'
+                        : 'bg-white text-gray-800 border-gray-300'
+                    }`}
+                  >
+                    💖 Girl
+                  </button>
+                  <button
+                    onClick={() => chooseTheme('neutral')}
+                    className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
+                      theme === 'neutral'
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-white text-gray-800 border-gray-300'
+                    }`}
+                  >
+                    🌿 Neutral
+                  </button>
+                </div>
+                {!theme && (
+                  <p className="text-[10px] text-red-600 mt-1">
+                    Please choose one option to continue.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-[11px] text-slate-700">
+                Theme selected:{' '}
+                <span className="font-semibold capitalize">{theme}</span> (fixed
+                for this device).
               </p>
             )}
           </div>
@@ -475,14 +475,6 @@ export default function Home() {
               Privacy &amp; data safety
             </Link>
           </p>
-          {theme && (
-            <button
-              onClick={resetTheme}
-              className="mt-2 text-[11px] text-slate-500 underline"
-            >
-              Change theme
-            </button>
-          )}
         </div>
       </main>
     );
@@ -497,7 +489,9 @@ export default function Home() {
 
   return (
     <main
-      className={`min-h-screen ${bgClass(effectiveTheme)} pb-10 overflow-x-hidden text-slate-900`}
+      className={`min-h-screen ${bgClass(
+        effectiveTheme,
+      )} pb-10 overflow-x-hidden text-slate-900`}
     >
       <div className="min-h-screen flex">
         {/* SIDEBAR – tablet / laptop */}
@@ -540,16 +534,8 @@ export default function Home() {
             <div className="flex justify-between items-center">
               <span className="text-slate-600">
                 Theme:{' '}
-                <span className="font-medium capitalize">
-                  {theme ?? 'neutral'}
-                </span>
+                <span className="font-medium capitalize">{theme ?? 'neutral'}</span>
               </span>
-              <button
-                onClick={resetTheme}
-                className="underline text-slate-700"
-              >
-                Change
-              </button>
             </div>
             <div className="flex justify-between items-center">
               <span className="truncate max-w-[120px] text-slate-600">
@@ -575,12 +561,9 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={resetTheme}
-                className="text-[11px] px-2 py-1 rounded-full border border-slate-300 bg-white"
-              >
-                {(theme ?? 'neutral')} 🔁
-              </button>
+              <span className="text-[11px] px-2 py-1 rounded-full border border-slate-300 bg-white text-slate-700">
+                {theme ?? 'neutral'}
+              </span>
               <button
                 onClick={() => setSidebarOpen((v) => !v)}
                 className="px-3 py-1 rounded-full border border-slate-300 bg-white text-sm"
@@ -659,7 +642,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* WRITE MODE: Ask + Add */}
+            {/* WRITE MODE */}
             {mode === 'write' && (
               <>
                 {/* Ask Memomate */}
@@ -673,7 +656,7 @@ export default function Home() {
                   </p>
                   <div className="flex flex-col md:flex-row gap-2 mb-2">
                     <input
-                      className="flex-1 border rounded-lg px-3 py-2 text-sm bg.white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                      className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
                       placeholder="Type your question here…"
                       value={question}
                       onChange={(e) => setQuestion(e.target.value)}
@@ -886,7 +869,6 @@ export default function Home() {
                       })}
                     </ul>
 
-                    {/* diary-style pagination */}
                     <div className="flex items-center justify-between text-[11px] text-gray-700">
                       <button
                         disabled={currentPage === 1}
