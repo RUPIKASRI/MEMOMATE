@@ -193,9 +193,12 @@ export default function Home() {
   };
 
   const handleAsk = async () => {
+    // reset previous state
     setQaResults([]);
     setQaMessage(null);
-
+    setAiAnswer(null);
+    setAiLoading(false);
+  
     if (!question.trim()) {
       setQaMessage('Type a question first.');
       return;
@@ -204,33 +207,36 @@ export default function Home() {
       setQaMessage("You don't have any notes yet.");
       return;
     }
-
+  
     const keywords = extractKeywords(question);
     if (keywords.length === 0) {
       setQaMessage('Try using keywords like "PAN", "bill", "headphones".');
       return;
     }
-
+  
     const matches = notes.filter((note) => {
       const content = note.content.toLowerCase();
       const tags = (note.tags || []).map((t) => t.toLowerCase());
-      return keywords.some(
+  
+      // ✅ ALL keywords must match content or tags (not just ANY)
+      return keywords.every(
         (kw) => content.includes(kw) || tags.some((tag) => tag.includes(kw)),
       );
     });
-
+  
     if (matches.length === 0) {
       setQaMessage('Nothing found in your notes for that.');
       return;
     }
-
+  
+    // show filtered matches to user
     setQaResults(matches.slice(0, 5));
     setQaMessage(`Found ${matches.length} related entr${matches.length === 1 ? 'y' : 'ies'}.`);
-
-    // PART 2 → Send to Gemini backend route
+  
+    // ✅ Ask Gemini to answer only using these filtered notes
     try {
       setAiLoading(true);
-
+  
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -243,7 +249,7 @@ export default function Home() {
           })),
         }),
       });
-
+  
       const data = await res.json();
       if (data.answer) {
         setAiAnswer(data.answer);
@@ -254,6 +260,7 @@ export default function Home() {
       setAiLoading(false);
     }
   };
+  
 
 
   const startEdit = (note: Note) => {
