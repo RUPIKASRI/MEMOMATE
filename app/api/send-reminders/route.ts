@@ -5,7 +5,7 @@ import webpush from "web-push";
 
 export const runtime = "nodejs";
 
-// Helper to create admin client safely
+// Helper to create admin client safely (only when the handler runs)
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -21,8 +21,9 @@ function getSupabaseAdmin() {
   return createClient(url, key);
 }
 
+// Configure web-push with your VAPID keys
 webpush.setVapidDetails(
-  "mailto:your-email@example.com",
+  "mailto:your-email@example.com", // optional, change to your email if you want
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY as string,
   process.env.VAPID_PRIVATE_KEY as string
 );
@@ -32,7 +33,7 @@ export async function POST() {
     const supabaseAdmin = getSupabaseAdmin();
     const now = new Date().toISOString();
 
-    // 1) Find due reminders
+    // 1) Find due reminders: reminder_at <= now AND not done
     const { data: dueNotes, error: notesError } = await supabaseAdmin
       .from("notes")
       .select("id, user_id, content, reminder_at, reminder_done")
@@ -50,7 +51,7 @@ export async function POST() {
 
     const userIds = Array.from(new Set(dueNotes.map((n: any) => n.user_id)));
 
-    // 2) Fetch subscriptions
+    // 2) Fetch subscriptions for those users
     const { data: subs, error: subsError } = await supabaseAdmin
       .from("push_subscriptions")
       .select("*")
@@ -87,7 +88,7 @@ export async function POST() {
       const payload = JSON.stringify({
         title,
         body,
-        data: { url: "/" },
+        data: { url: "/" }, // where to open when user taps notification
       });
 
       for (const sub of userSubs) {
@@ -103,6 +104,7 @@ export async function POST() {
           .sendNotification(pushSub as any, payload)
           .catch(async (err) => {
             console.error("Push error", err.statusCode);
+            // 410 / 404 = subscription expired → delete it
             if (err.statusCode === 410 || err.statusCode === 404) {
               await supabaseAdmin
                 .from("push_subscriptions")
@@ -117,8 +119,10 @@ export async function POST() {
       noteIdsToMarkDone.push(note.id);
     }
 
+    // Wait for all pushes to attempt
     await Promise.all(sendPromises);
 
+    // 4) Mark reminders as done so they don't fire again
     if (noteIdsToMarkDone.length > 0) {
       await supabaseAdmin
         .from("notes")
@@ -134,4 +138,9 @@ export async function POST() {
     console.error("send-reminders error", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
+}
+
+// Allow GET so you can trigger it from the browser URL for testing
+export async function GET() {
+  return POST();
 }
