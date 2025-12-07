@@ -19,6 +19,15 @@ type Note = {
 type Theme = 'neutral' | 'boy' | 'girl';
 type Mode = 'write' | 'diary';
 
+type PushSubscriptionJSON = {
+  endpoint: string;
+  expirationTime: number | null;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+};
+
 const STOPWORDS = new Set([
   'where',
   'when',
@@ -184,6 +193,23 @@ function reminderStatus(note: Note): 'none' | 'upcoming' | 'due' | 'done' {
   return when <= now ? 'due' : 'upcoming';
 }
 
+/* ---------- PUSH KEY HELPER ---------- */
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = typeof window === 'undefined' ? '' : window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 /* ---------- PAGE COMPONENT ---------- */
 
 export default function Home() {
@@ -226,6 +252,9 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
 
   // Streaks (computed from notes)
   const { current: currentStreak, longest: longestStreak } = useMemo(
@@ -473,7 +502,7 @@ export default function Home() {
         content: editingContent.trim(),
         tags: tagsArray,
         reminder_at: reminderValue,
-        reminder_done: false, // reset when editing reminder
+        reminder_done: false, // reset when editing
       })
       .eq('id', editingId)
       .select('*')
@@ -660,6 +689,73 @@ export default function Home() {
       console.error(e);
       setErrorMsg('Could not start voice input.');
       setIsRecording(false);
+    }
+  };
+
+  /* ---------- ENABLE NOTIFICATIONS (SUBSCRIBE) ---------- */
+  const enableNotifications = async () => {
+    if (typeof window === 'undefined') return;
+    if (!session) {
+      setErrorMsg('Login first before enabling notifications.');
+      return;
+    }
+
+    if (!('Notification' in window)) {
+      setErrorMsg('Notifications are not supported in this browser.');
+      return;
+    }
+
+    try {
+      setNotifLoading(true);
+      setErrorMsg(null);
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setErrorMsg('You blocked notifications. Enable from browser settings if needed.');
+        setNotifLoading(false);
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+
+      const existingSub = await reg.pushManager.getSubscription();
+      if (existingSub) {
+        setNotificationsEnabled(true);
+        setNotifLoading(false);
+        return;
+      }
+
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        setErrorMsg('Notifications are not configured on server.');
+        setNotifLoading(false);
+        return;
+      }
+
+      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+
+      const subJson = sub.toJSON() as PushSubscriptionJSON;
+
+      await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: subJson,
+          userId: session.user.id,
+        }),
+      });
+
+      setNotificationsEnabled(true);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Failed to enable notifications.');
+    } finally {
+      setNotifLoading(false);
     }
   };
 
@@ -1063,7 +1159,28 @@ export default function Home() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
+
+                  {/* Enable notifications button */}
+                  <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={enableNotifications}
+                      disabled={notifLoading || notificationsEnabled}
+                      className="text-[11px] px-3 py-1 rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60"
+                    >
+                      {notificationsEnabled
+                        ? '🔔 Notifications enabled on this device'
+                        : notifLoading
+                        ? 'Enabling notifications…'
+                        : '🔔 Enable reminder notifications on this device'}
+                    </button>
+                    <span className="text-[10px] text-slate-500 text-right">
+                      This registers your device for reminders. Background push needs
+                      server + cron (already being wired).
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex justify-between items-center">
                     <button
                       onClick={handleAddNote}
                       disabled={saving}
