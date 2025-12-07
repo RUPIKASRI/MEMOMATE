@@ -407,7 +407,7 @@ export default function Home() {
       <div className="min-h-screen">
         {/* Header */}
         <header className="border-b bg-white">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-lg font-semibold text-slate-900">Memomate</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800">
@@ -421,28 +421,31 @@ export default function Home() {
                 <span className="text-gray-700">Decor:</span>
                 <button
                   onClick={() => setTheme('neutral')}
-                  className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'neutral'
+                  className={`px-2 py-0.5 rounded-full border text-[10px] ${
+                    theme === 'neutral'
                       ? 'bg-slate-900 text-white border-slate-900'
                       : 'bg-white text-gray-800 border-gray-300'
-                    }`}
+                  }`}
                 >
                   Neutral
                 </button>
                 <button
                   onClick={() => setTheme('boy')}
-                  className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'boy'
+                  className={`px-2 py-0.5 rounded-full border text-[10px] ${
+                    theme === 'boy'
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-white text-gray-800 border-gray-300'
-                    }`}
+                  }`}
                 >
                   Boy
                 </button>
                 <button
                   onClick={() => setTheme('girl')}
-                  className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'girl'
+                  className={`px-2 py-0.5 rounded-full border text-[10px] ${
+                    theme === 'girl'
                       ? 'bg-pink-600 text-white border-pink-600'
                       : 'bg-white text-gray-800 border-gray-300'
-                    }`}
+                  }`}
                 >
                   Girl
                 </button>
@@ -484,15 +487,17 @@ export default function Home() {
             <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 text-[11px]">
               <button
                 onClick={() => setMode('write')}
-                className={`px-3 py-1 rounded-full ${mode === 'write' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
-                  }`}
+                className={`px-3 py-1 rounded-full ${
+                  mode === 'write' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
+                }`}
               >
                 📝 Write
               </button>
               <button
                 onClick={() => setMode('diary')}
-                className={`px-3 py-1 rounded-full ${mode === 'diary' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
-                  }`}
+                className={`px-3 py-1 rounded-full ${
+                  mode === 'diary' ? 'bg-white shadow text-slate-900' : 'text-slate-600'
+                }`}
               >
                 📖 Diary
               </button>
