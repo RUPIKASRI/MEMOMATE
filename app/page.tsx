@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import Link from 'next/link';
+const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+const [aiLoading, setAiLoading] = useState(false);
 
 
 type Note = {
@@ -188,7 +190,7 @@ export default function Home() {
     setSaving(false);
   };
 
-  const handleAsk = () => {
+  const handleAsk = async () => {
     setQaResults([]);
     setQaMessage(null);
 
@@ -222,7 +224,35 @@ export default function Home() {
 
     setQaResults(matches.slice(0, 5));
     setQaMessage(`Found ${matches.length} related entr${matches.length === 1 ? 'y' : 'ies'}.`);
+
+    // PART 2 → Send to Gemini backend route
+    try {
+      setAiLoading(true);
+
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          notes: matches.slice(0, 10).map((n) => ({
+            content: n.content,
+            tags: n.tags,
+            created_at: n.created_at,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.answer) {
+        setAiAnswer(data.answer);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAiLoading(false);
+    }
   };
+
 
   const startEdit = (note: Note) => {
     setEditingId(note.id);
@@ -356,8 +386,8 @@ export default function Home() {
               <button
                 onClick={() => setTheme('neutral')}
                 className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'neutral'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white text-gray-800 border-gray-300'
+                  ? 'bg-slate-900 text-white border-slate-900'
+                  : 'bg-white text-gray-800 border-gray-300'
                   }`}
               >
                 Neutral
@@ -365,8 +395,8 @@ export default function Home() {
               <button
                 onClick={() => setTheme('boy')}
                 className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'boy'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-800 border-gray-300'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-800 border-gray-300'
                   }`}
               >
                 Boy
@@ -374,8 +404,8 @@ export default function Home() {
               <button
                 onClick={() => setTheme('girl')}
                 className={`px-2 py-0.5 rounded-full border text-[10px] ${theme === 'girl'
-                    ? 'bg-pink-600 text-white border-pink-600'
-                    : 'bg-white text-gray-800 border-gray-300'
+                  ? 'bg-pink-600 text-white border-pink-600'
+                  : 'bg-white text-gray-800 border-gray-300'
                   }`}
               >
                 Girl
@@ -482,6 +512,16 @@ export default function Home() {
                     ))}
                   </ul>
                 )}
+                {aiLoading && (
+  <p className="text-xs text-gray-800 mt-2">Thinking…</p>
+)}
+
+{aiAnswer && (
+  <div className="mt-3 p-2 border rounded-lg bg-emerald-50 text-sm text-emerald-900">
+    <strong>Smart answer:</strong> {aiAnswer}
+  </div>
+)}
+
               </div>
 
               {/* Add note */}
