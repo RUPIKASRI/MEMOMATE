@@ -513,14 +513,14 @@ export default function Home() {
                   </ul>
                 )}
                 {aiLoading && (
-  <p className="text-xs text-gray-800 mt-2">Thinking…</p>
-)}
+                  <p className="text-xs text-gray-800 mt-2">Thinking…</p>
+                )}
 
-{aiAnswer && (
-  <div className="mt-3 p-2 border rounded-lg bg-emerald-50 text-sm text-emerald-900">
-    <strong>Smart answer:</strong> {aiAnswer}
-  </div>
-)}
+                {aiAnswer && (
+                  <div className="mt-3 p-2 border rounded-lg bg-emerald-50 text-sm text-emerald-900">
+                    <strong>Smart answer:</strong> {aiAnswer}
+                  </div>
+                )}
 
               </div>
 
