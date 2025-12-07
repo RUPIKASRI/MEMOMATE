@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import Link from 'next/link';
-const [aiAnswer, setAiAnswer] = useState<string | null>(null);
-const [aiLoading, setAiLoading] = useState(false);
+
 
 
 type Note = {
@@ -62,6 +61,9 @@ function noteBorder(theme: Theme) {
 export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const [theme, setTheme] = useState<Theme>('neutral');
   const [mode, setMode] = useState<Mode>('write'); // 📝 vs 📖
