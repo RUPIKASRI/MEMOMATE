@@ -12,6 +12,8 @@ type Note = {
   created_at: string;
   pinned: boolean;
   favorite: boolean;
+  reminder_at: string | null;
+  reminder_done: boolean;
 };
 
 type Theme = 'neutral' | 'boy' | 'girl';
@@ -129,7 +131,7 @@ function calculateStreaks(notes: Note[]): { current: number; longest: number } {
   // Current streak up to today
   let current = 0;
   const today = new Date();
-  let cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate()); // local midnight
+  let cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   while (true) {
     const key = dateKeyLocal(cursor);
@@ -142,6 +144,36 @@ function calculateStreaks(notes: Note[]): { current: number; longest: number } {
   }
 
   return { current, longest };
+}
+
+/* ---------- REMINDER HELPERS ---------- */
+
+// Convert ISO string to "YYYY-MM-DDTHH:mm" for <input type="datetime-local">
+function toInputDateTime(value: string | null): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function formatReadable(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString();
+}
+
+function reminderStatus(note: Note): 'none' | 'upcoming' | 'due' | 'done' {
+  if (!note.reminder_at) return 'none';
+  if (note.reminder_done) return 'done';
+  const now = new Date().getTime();
+  const when = new Date(note.reminder_at).getTime();
+  if (Number.isNaN(when)) return 'none';
+  return when <= now ? 'due' : 'upcoming';
 }
 
 /* ---------- PAGE COMPONENT ---------- */
@@ -162,7 +194,10 @@ export default function Home() {
 
   const [newContent, setNewContent] = useState('');
   const [newTags, setNewTags] = useState('');
+  const [newReminder, setNewReminder] = useState(''); // datetime-local
   const [saving, setSaving] = useState(false);
+
+  const [isRecording, setIsRecording] = useState(false); // 🎙 voice state
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -174,6 +209,7 @@ export default function Home() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
   const [editingTags, setEditingTags] = useState('');
+  const [editingReminder, setEditingReminder] = useState(''); // datetime-local
   const [editingSaving, setEditingSaving] = useState(false);
 
   const [page, setPage] = useState(1);
@@ -254,6 +290,8 @@ export default function Home() {
         ...n,
         pinned: !!n.pinned,
         favorite: !!n.favorite,
+        reminder_at: n.reminder_at ?? null,
+        reminder_done: !!n.reminder_done,
       }));
       setNotes(list);
       setPage(1);
@@ -285,12 +323,16 @@ export default function Home() {
         .map((t) => t.trim())
         .filter(Boolean) || [];
 
+    const reminderValue = newReminder || null;
+
     const { data, error } = await supabase
       .from('notes')
       .insert({
         user_id: session.user.id,
         content: newContent.trim(),
         tags: tagsArray,
+        reminder_at: reminderValue,
+        reminder_done: false,
       })
       .select('*')
       .single();
@@ -301,11 +343,18 @@ export default function Home() {
     } else if (data) {
       const note = data as Note;
       setNotes((prev) => [
-        { ...note, pinned: !!note.pinned, favorite: !!note.favorite },
+        {
+          ...note,
+          pinned: !!note.pinned,
+          favorite: !!note.favorite,
+          reminder_at: note.reminder_at ?? null,
+          reminder_done: !!note.reminder_done,
+        },
         ...prev,
       ]);
       setNewContent('');
       setNewTags('');
+      setNewReminder('');
     }
     setSaving(false);
   };
@@ -381,6 +430,7 @@ export default function Home() {
     setEditingId(note.id);
     setEditingContent(note.content);
     setEditingTags((note.tags || []).join(', '));
+    setEditingReminder(toInputDateTime(note.reminder_at));
     setErrorMsg(null);
   };
 
@@ -388,6 +438,7 @@ export default function Home() {
     setEditingId(null);
     setEditingContent('');
     setEditingTags('');
+    setEditingReminder('');
     setEditingSaving(false);
   };
 
@@ -406,11 +457,15 @@ export default function Home() {
         .map((t) => t.trim())
         .filter(Boolean) || [];
 
+    const reminderValue = editingReminder || null;
+
     const { data, error } = await supabase
       .from('notes')
       .update({
         content: editingContent.trim(),
         tags: tagsArray,
+        reminder_at: reminderValue,
+        reminder_done: false, // reset when editing
       })
       .eq('id', editingId)
       .select('*')
@@ -428,6 +483,8 @@ export default function Home() {
                 ...updated,
                 pinned: !!updated.pinned,
                 favorite: !!updated.favorite,
+                reminder_at: updated.reminder_at ?? null,
+                reminder_done: !!updated.reminder_done,
               }
             : n,
         ),
@@ -473,6 +530,8 @@ export default function Home() {
                 ...updated,
                 pinned: !!updated.pinned,
                 favorite: !!updated.favorite,
+                reminder_at: updated.reminder_at ?? null,
+                reminder_done: !!updated.reminder_done,
               }
             : n,
         )
@@ -510,10 +569,91 @@ export default function Home() {
               ...updated,
               pinned: !!updated.pinned,
               favorite: !!updated.favorite,
+              reminder_at: updated.reminder_at ?? null,
+              reminder_done: !!updated.reminder_done,
             }
           : n,
       ),
     );
+  };
+
+  const markReminderDone = async (note: Note) => {
+    if (!note.reminder_at) return;
+    const { data, error } = await supabase
+      .from('notes')
+      .update({ reminder_done: true })
+      .eq('id', note.id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error(error);
+      setErrorMsg('Could not update reminder.');
+      return;
+    }
+
+    const updated = data as Note;
+    setNotes((prev) =>
+      prev.map((n) =>
+        n.id === note.id
+          ? {
+              ...updated,
+              pinned: !!updated.pinned,
+              favorite: !!updated.favorite,
+              reminder_at: updated.reminder_at ?? null,
+              reminder_done: !!updated.reminder_done,
+            }
+          : n,
+      ),
+    );
+  };
+
+  /* ---------- VOICE INPUT HANDLER ---------- */
+  const handleVoiceInput = () => {
+    if (typeof window === 'undefined') return;
+
+    const SR =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SR) {
+      setErrorMsg('Voice input is not supported in this browser.');
+      return;
+    }
+
+    const recog = new SR();
+    recog.lang = 'en-IN';
+    recog.interimResults = false;
+    recog.maxAlternatives = 1;
+
+    recog.onstart = () => {
+      setIsRecording(true);
+      // Clear any old error
+      setErrorMsg(null);
+    };
+
+    recog.onresult = (event: any) => {
+      const text = event.results[0][0].transcript;
+      setNewContent((prev) => (prev ? prev + ' ' + text : text));
+    };
+
+    recog.onerror = (event: any) => {
+      console.error('Speech error', event.error);
+      setErrorMsg('Voice input error, please try again.');
+      setIsRecording(false);
+    };
+
+    recog.onend = () => {
+      setIsRecording(false);
+    };
+
+    try {
+      recog.start();
+    } catch (e) {
+      console.error(e);
+      setErrorMsg('Could not start voice input.');
+      setIsRecording(false);
+    }
   };
 
   // ========= RENDER =========
@@ -867,9 +1007,22 @@ export default function Home() {
 
                 {/* Add note */}
                 <div className="rounded-2xl border bg-white p-4 mb-4 shadow-sm">
-                  <h3 className="text-sm font-semibold mb-1 text-slate-900">
-                    New diary entry
-                  </h3>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      New diary entry
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleVoiceInput}
+                      className={`text-[11px] px-3 py-1 rounded-full border ${
+                        isRecording
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                          : 'border-slate-300 bg-white text-slate-700'
+                      }`}
+                    >
+                      {isRecording ? '🎙 Listening…' : '🎙 Tap to speak'}
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-700 mb-3">
                     Example: &quot;PAN card is in blue file top drawer&quot; or
                     &quot;AC serviced on 5 Feb, cost 1500&quot;.
@@ -887,6 +1040,22 @@ export default function Home() {
                     value={newTags}
                     onChange={(e) => setNewTags(e.target.value)}
                   />
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] text-slate-700">
+                        Optional reminder
+                      </label>
+                      <input
+                        type="datetime-local"
+                        className="border rounded-lg px-3 py-1.5 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                        value={newReminder}
+                        onChange={(e) => setNewReminder(e.target.value)}
+                      />
+                      <span className="text-[10px] text-slate-500">
+                        Example: EB bill due date, EMI date, renewal, etc.
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex justify-between items-center">
                     <button
                       onClick={handleAddNote}
@@ -981,6 +1150,7 @@ export default function Home() {
                     <ul className="space-y-3 mb-3">
                       {pageNotes.map((note) => {
                         const isEditing = editingId === note.id;
+                        const rStatus = reminderStatus(note);
                         return (
                           <li
                             key={note.id}
@@ -1075,11 +1245,63 @@ export default function Home() {
                                     setEditingTags(e.target.value)
                                   }
                                 />
+                                <div className="mt-1 flex flex-col gap-1">
+                                  <label className="text-[11px] text-slate-700">
+                                    Reminder (optional)
+                                  </label>
+                                  <input
+                                    type="datetime-local"
+                                    className="border rounded-lg px-2 py-1 text-[11px] bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                    value={editingReminder}
+                                    onChange={(e) =>
+                                      setEditingReminder(e.target.value)
+                                    }
+                                  />
+                                  <span className="text-[10px] text-slate-500">
+                                    Clear it to remove reminder.
+                                  </span>
+                                </div>
                               </>
                             ) : (
-                              <p className="mb-1 whitespace-pre-wrap text-slate-900">
-                                {note.content}
-                              </p>
+                              <>
+                                <p className="mb-1 whitespace-pre-wrap text-slate-900">
+                                  {note.content}
+                                </p>
+                                {rStatus !== 'none' && (
+                                  <div className="mt-1 flex items-center gap-2 text-[11px]">
+                                    {rStatus === 'upcoming' && note.reminder_at && (
+                                      <span className="px-2 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-800">
+                                        ⏰ Reminder on{' '}
+                                        {formatReadable(note.reminder_at)}
+                                      </span>
+                                    )}
+                                    {rStatus === 'due' && note.reminder_at && (
+                                      <span className="px-2 py-0.5 rounded-full bg-red-50 border border-red-200 text-red-700">
+                                        ⏰ Reminder due! ({formatReadable(
+                                          note.reminder_at,
+                                        )}
+                                        )
+                                      </span>
+                                    )}
+                                    {rStatus === 'done' && note.reminder_at && (
+                                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800">
+                                        ✅ Reminder done ({formatReadable(
+                                          note.reminder_at,
+                                        )}
+                                        )
+                                      </span>
+                                    )}
+                                    {rStatus === 'due' && (
+                                      <button
+                                        onClick={() => markReminderDone(note)}
+                                        className="underline text-[11px] text-emerald-700"
+                                      >
+                                        Mark done
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </>
                             )}
 
                             <div className="flex flex-wrap gap-1 mt-1">
