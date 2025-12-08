@@ -1,1 +1,152 @@
-if(!self.define){let e,s={};const n=(n,t)=>(n=new URL(n+".js",t).href,s[n]||new Promise(s=>{if("document"in self){const e=document.createElement("script");e.src=n,e.onload=s,document.head.appendChild(e)}else e=n,importScripts(n),s()}).then(()=>{let e=s[n];if(!e)throw new Error(`Module ${n} didn’t register its module`);return e}));self.define=(t,i)=>{const a=e||("document"in self?document.currentScript.src:"")||location.href;if(s[a])return;let c={};const r=e=>n(e,a),o={module:{uri:a},exports:c,require:r};s[a]=Promise.all(t.map(e=>o[e]||r(e))).then(e=>(i(...e),c))}}define(["./workbox-4754cb34"],function(e){"use strict";importScripts(),self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"/_next/static/chunks/265-d3da9d97ca25e25d.js",revision:"d3da9d97ca25e25d"},{url:"/_next/static/chunks/4bd1b696-deba172d32c79f82.js",revision:"deba172d32c79f82"},{url:"/_next/static/chunks/794-62387c181da8cbd1.js",revision:"62387c181da8cbd1"},{url:"/_next/static/chunks/app/_global-error/page-0fb8738d38d87e47.js",revision:"0fb8738d38d87e47"},{url:"/_next/static/chunks/app/_not-found/page-931ec51851ad89f9.js",revision:"931ec51851ad89f9"},{url:"/_next/static/chunks/app/api/ask/route-0fb8738d38d87e47.js",revision:"0fb8738d38d87e47"},{url:"/_next/static/chunks/app/api/send-reminders/route-0fb8738d38d87e47.js",revision:"0fb8738d38d87e47"},{url:"/_next/static/chunks/app/api/subscribe/route-0fb8738d38d87e47.js",revision:"0fb8738d38d87e47"},{url:"/_next/static/chunks/app/layout-a004a6e14e1d0e70.js",revision:"a004a6e14e1d0e70"},{url:"/_next/static/chunks/app/page-368b3a7b0ac3a606.js",revision:"368b3a7b0ac3a606"},{url:"/_next/static/chunks/app/privacy/page-0fb8738d38d87e47.js",revision:"0fb8738d38d87e47"},{url:"/_next/static/chunks/framework-292291387d6b2e39.js",revision:"292291387d6b2e39"},{url:"/_next/static/chunks/main-ae33cc0508496a8c.js",revision:"ae33cc0508496a8c"},{url:"/_next/static/chunks/main-app-57817d440f96203e.js",revision:"57817d440f96203e"},{url:"/_next/static/chunks/next/dist/client/components/builtin/app-error-0fb8738d38d87e47.js",revision:"0fb8738d38d87e47"},{url:"/_next/static/chunks/next/dist/client/components/builtin/forbidden-0fb8738d38d87e47.js",revision:"0fb8738d38d87e47"},{url:"/_next/static/chunks/next/dist/client/components/builtin/global-error-e135f2821fb44b1c.js",revision:"e135f2821fb44b1c"},{url:"/_next/static/chunks/next/dist/client/components/builtin/not-found-0fb8738d38d87e47.js",revision:"0fb8738d38d87e47"},{url:"/_next/static/chunks/next/dist/client/components/builtin/unauthorized-0fb8738d38d87e47.js",revision:"0fb8738d38d87e47"},{url:"/_next/static/chunks/polyfills-42372ed130431b0a.js",revision:"846118c33b2c0e922d7b3a7676f81f6f"},{url:"/_next/static/chunks/webpack-b6d996bb3db25032.js",revision:"b6d996bb3db25032"},{url:"/_next/static/css/19029c2376e203fc.css",revision:"19029c2376e203fc"},{url:"/_next/static/media/4cf2300e9c8272f7-s.p.woff2",revision:"18bae71b1e1b2bb25321090a3b563103"},{url:"/_next/static/media/747892c23ea88013-s.woff2",revision:"a0761690ccf4441ace5cec893b82d4ab"},{url:"/_next/static/media/8d697b304b401681-s.woff2",revision:"cc728f6c0adb04da0dfcb0fc436a8ae5"},{url:"/_next/static/media/93f479601ee12b01-s.p.woff2",revision:"da83d5f06d825c5ae65b7cca706cb312"},{url:"/_next/static/media/9610d9e46709d722-s.woff2",revision:"7b7c0ef93df188a852344fc272fc096b"},{url:"/_next/static/media/ba015fad6dcf6784-s.woff2",revision:"8ea4f719af3312a055caf09f34c89a77"},{url:"/_next/static/wlonbHJdOLttmdRxr4QpX/_buildManifest.js",revision:"1ceaef8ab27cf310d95b97147380c6ed"},{url:"/_next/static/wlonbHJdOLttmdRxr4QpX/_ssgManifest.js",revision:"b6652df95db52feb4daf4eca35380933"},{url:"/file.svg",revision:"d09f95206c3fa0bb9bd9fefabfd0ea71"},{url:"/globe.svg",revision:"2aaafa6a49b6563925fe440891e32717"},{url:"/icons/icon-192.png",revision:"f9cac33ccb117843e691fe430dbe3355"},{url:"/icons/icon-512.png",revision:"f9cac33ccb117843e691fe430dbe3355"},{url:"/manifest.json",revision:"cd22ff1381e7be1159a6e4c767abd690"},{url:"/next.svg",revision:"8e061864f388b47f33a1c3780831193e"},{url:"/vercel.svg",revision:"c0af2f507b369b085b35ef4bbe3bcf1e"},{url:"/window.svg",revision:"a2760511c65806022ad20adf74370ff3"}],{ignoreURLParametersMatching:[]}),e.cleanupOutdatedCaches(),e.registerRoute("/",new e.NetworkFirst({cacheName:"start-url",plugins:[{cacheWillUpdate:async({request:e,response:s,event:n,state:t})=>s&&"opaqueredirect"===s.type?new Response(s.body,{status:200,statusText:"OK",headers:s.headers}):s}]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,new e.CacheFirst({cacheName:"google-fonts-webfonts",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:31536e3})]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,new e.StaleWhileRevalidate({cacheName:"google-fonts-stylesheets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,new e.StaleWhileRevalidate({cacheName:"static-font-assets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,new e.StaleWhileRevalidate({cacheName:"static-image-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/image\?url=.+$/i,new e.StaleWhileRevalidate({cacheName:"next-image",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp3|wav|ogg)$/i,new e.CacheFirst({cacheName:"static-audio-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp4)$/i,new e.CacheFirst({cacheName:"static-video-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:js)$/i,new e.StaleWhileRevalidate({cacheName:"static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:css|less)$/i,new e.StaleWhileRevalidate({cacheName:"static-style-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/data\/.+\/.+\.json$/i,new e.StaleWhileRevalidate({cacheName:"next-data",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:json|xml|csv)$/i,new e.NetworkFirst({cacheName:"static-data-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:e})=>{if(!(self.origin===e.origin))return!1;const s=e.pathname;return!s.startsWith("/api/auth/")&&!!s.startsWith("/api/")},new e.NetworkFirst({cacheName:"apis",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:16,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:e})=>{if(!(self.origin===e.origin))return!1;return!e.pathname.startsWith("/api/")},new e.NetworkFirst({cacheName:"others",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:e})=>!(self.origin===e.origin),new e.NetworkFirst({cacheName:"cross-origin",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:3600})]}),"GET")});
+// public/sw.js
+// Simple service worker with caching + push notification support
+// Replace your existing sw.js with this file, then unregister old SWs and reload the page.
+
+const CACHE_NAME = 'memomate-v1';
+const STATIC_ASSETS = [
+  '/', 
+  '/manifest.json',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/favicon.ico'
+  // Add any other static paths you want cached by default.
+];
+
+// Install - cache static assets
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch((err) => {
+        // ignore failures for individual URLs
+        console.warn('SW cache.addAll failed:', err);
+      });
+    })
+  );
+});
+
+// Activate - cleanup old caches
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) return caches.delete(key);
+        })
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+// Fetch - basic cache-first for same-origin navigation and static assets; network-first for /api/
+self.addEventListener('fetch', (event) => {
+  try {
+    const req = event.request;
+    const url = new URL(req.url);
+
+    // Always try network for API routes (so dynamic data stays fresh)
+    if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) {
+      event.respondWith(
+        fetch(req)
+          .then((res) => {
+            // optional: cache API responses here if you want
+            return res;
+          })
+          .catch(() => caches.match(req))
+      );
+      return;
+    }
+
+    // For navigation requests, serve the cached shell if possible (fallback to network)
+    if (req.mode === 'navigate' || (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'))) {
+      event.respondWith(
+        caches.match(req).then((cached) => {
+          return cached || fetch(req).then((res) => {
+            // optionally cache navigation/html responses (not recommended for dynamic pages)
+            return res;
+          });
+        }).catch(() => caches.match('/'))
+      );
+      return;
+    }
+
+    // For other GET requests (static assets), try cache first, then network and cache the result
+    if (req.method === 'GET') {
+      event.respondWith(
+        caches.match(req).then((cached) => {
+          if (cached) return cached;
+          return fetch(req)
+            .then((res) => {
+              // don't cache opaque responses from cross-origin by default
+              if (!res || res.status !== 200 || res.type === 'opaque') return res;
+              const clone = res.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+              return res;
+            })
+            .catch(() => {
+              // fallback to a cached asset if available
+              return caches.match('/icons/icon-192.png');
+            });
+        })
+      );
+    }
+  } catch (e) {
+    // If something goes wrong, just let the request go to network
+    console.error('SW fetch handler error', e);
+  }
+});
+
+/* ---------- PUSH NOTIFICATION HANDLERS ---------- */
+self.addEventListener('push', function(event) {
+  let payload = {};
+  try {
+    if (event.data) payload = event.data.json();
+  } catch (e) {
+    try {
+      // try plain text
+      if (event.data && typeof event.data.text === 'function') {
+        payload = { title: 'Memomate reminder', body: event.data.text() };
+      } else {
+        payload = { title: 'Memomate reminder', body: 'You have a reminder.' };
+      }
+    } catch (e2) {
+      payload = { title: 'Memomate reminder', body: 'You have a reminder.' };
+    }
+  }
+
+  const title = payload.title || 'Memomate reminder';
+  const body = payload.body || 'You have a reminder due in Memomate.';
+  const url = (payload.data && payload.data.url) || '/';
+
+  const options = {
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: { url }
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (const client of clientList) {
+        // If a window with the url is already open, focus it.
+        try {
+          if (client.url === url && 'focus' in client) {
+            return client.focus();
+          }
+        } catch (e) {
+          // client.url access may throw in some contexts; ignore
+        }
+      }
+      // Otherwise open a new window/tab.
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
+  );
+});
