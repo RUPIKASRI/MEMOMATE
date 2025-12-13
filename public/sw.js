@@ -1,6 +1,7 @@
 // public/sw.js
 // Simple service worker with caching + push notification support
 // Replace your existing sw.js with this file, then unregister old SWs and reload the page.
+// DEPLOY TEST: PUSH HANDLER ACTIVE
 
 const CACHE_NAME = 'memomate-v1';
 const STATIC_ASSETS = [
