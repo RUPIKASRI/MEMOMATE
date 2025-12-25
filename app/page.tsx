@@ -1248,9 +1248,10 @@ export default function Home() {
                           onChange={(e) => setEmailImportant(e.target.checked)}
                         />
                         <span className="text-[11px] text-slate-700">
-                          Send email reminder also (for important things)
+                          Send email reminder also to (for important things)
                         </span>
                       </div>
+                      
 
                     </div>
                   </div>
