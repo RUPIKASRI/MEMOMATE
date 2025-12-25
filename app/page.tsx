@@ -230,6 +230,8 @@ export default function Home() {
   const [newTags, setNewTags] = useState('');
   const [newReminder, setNewReminder] = useState(''); // datetime-local
   const [saving, setSaving] = useState(false);
+  const [emailImportant, setEmailImportant] = useState(false);
+
 
   const [isRecording, setIsRecording] = useState(false); // 🎙 voice state
 
@@ -550,12 +552,12 @@ export default function Home() {
         prev.map((n) =>
           n.id === editingId
             ? {
-                ...updated,
-                pinned: !!updated.pinned,
-                favorite: !!updated.favorite,
-                reminder_at: updated.reminder_at ?? null,
-                reminder_done: !!updated.reminder_done,
-              }
+              ...updated,
+              pinned: !!updated.pinned,
+              favorite: !!updated.favorite,
+              reminder_at: updated.reminder_at ?? null,
+              reminder_done: !!updated.reminder_done,
+            }
             : n,
         ),
       );
@@ -597,12 +599,12 @@ export default function Home() {
         .map((n) =>
           n.id === note.id
             ? {
-                ...updated,
-                pinned: !!updated.pinned,
-                favorite: !!updated.favorite,
-                reminder_at: updated.reminder_at ?? null,
-                reminder_done: !!updated.reminder_done,
-              }
+              ...updated,
+              pinned: !!updated.pinned,
+              favorite: !!updated.favorite,
+              reminder_at: updated.reminder_at ?? null,
+              reminder_done: !!updated.reminder_done,
+            }
             : n,
         )
         .sort((a, b) => {
@@ -625,7 +627,7 @@ export default function Home() {
       .select('*')
       .single();
 
-  if (error) {
+    if (error) {
       console.error(error);
       setErrorMsg('Could not update favorite.');
       return;
@@ -636,12 +638,12 @@ export default function Home() {
       prev.map((n) =>
         n.id === note.id
           ? {
-              ...updated,
-              pinned: !!updated.pinned,
-              favorite: !!updated.favorite,
-              reminder_at: updated.reminder_at ?? null,
-              reminder_done: !!updated.reminder_done,
-            }
+            ...updated,
+            pinned: !!updated.pinned,
+            favorite: !!updated.favorite,
+            reminder_at: updated.reminder_at ?? null,
+            reminder_done: !!updated.reminder_done,
+          }
           : n,
       ),
     );
@@ -667,12 +669,12 @@ export default function Home() {
       prev.map((n) =>
         n.id === note.id
           ? {
-              ...updated,
-              pinned: !!updated.pinned,
-              favorite: !!updated.favorite,
-              reminder_at: updated.reminder_at ?? null,
-              reminder_done: !!updated.reminder_done,
-            }
+            ...updated,
+            pinned: !!updated.pinned,
+            favorite: !!updated.favorite,
+            reminder_at: updated.reminder_at ?? null,
+            reminder_done: !!updated.reminder_done,
+          }
           : n,
       ),
     );
@@ -893,31 +895,28 @@ export default function Home() {
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <button
                     onClick={() => chooseTheme('boy')}
-                    className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
-                      theme === 'boy'
+                    className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${theme === 'boy'
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white text-gray-800 border-gray-300'
-                    }`}
+                      }`}
                   >
                     🧢 Boy
                   </button>
                   <button
                     onClick={() => chooseTheme('girl')}
-                    className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
-                      theme === 'girl'
+                    className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${theme === 'girl'
                         ? 'bg-pink-600 text-white border-pink-600'
                         : 'bg-white text-gray-800 border-gray-300'
-                    }`}
+                      }`}
                   >
                     💖 Girl
                   </button>
                   <button
                     onClick={() => chooseTheme('neutral')}
-                    className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${
-                      theme === 'neutral'
+                    className={`px-3 py-1.5 rounded-full border text-[11px] flex items-center gap-1 ${theme === 'neutral'
                         ? 'bg-slate-900 text-white border-slate-900'
                         : 'bg-white text-gray-800 border-gray-300'
-                    }`}
+                      }`}
                   >
                     🌿 Neutral
                   </button>
@@ -988,21 +987,19 @@ export default function Home() {
           <nav className="flex-1 px-3 py-4 space-y-2 text-sm">
             <button
               onClick={() => setMode('write')}
-              className={`w-full text-left px-3 py-2 rounded-xl transition ${
-                mode === 'write'
+              className={`w-full text-left px-3 py-2 rounded-xl transition ${mode === 'write'
                   ? 'bg-slate-900 text-white shadow'
                   : 'text-slate-700 hover:bg-slate-100'
-              }`}
+                }`}
             >
               ✍️ Write
             </button>
             <button
               onClick={() => setMode('diary')}
-              className={`w-full text-left px-3 py-2 rounded-xl transition ${
-                mode === 'diary'
+              className={`w-full text-left px-3 py-2 rounded-xl transition ${mode === 'diary'
                   ? 'bg-slate-900 text-white shadow'
                   : 'text-slate-700 hover:bg-slate-100'
-              }`}
+                }`}
             >
               📖 Diary
             </button>
@@ -1064,11 +1061,10 @@ export default function Home() {
                   setMode('write');
                   setSidebarOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 rounded-lg ${
-                  mode === 'write'
+                className={`w-full text-left px-3 py-2 rounded-lg ${mode === 'write'
                     ? 'bg-slate-900 text-white'
                     : 'text-slate-700 hover:bg-slate-100'
-                }`}
+                  }`}
               >
                 ✍️ Write
               </button>
@@ -1077,11 +1073,10 @@ export default function Home() {
                   setMode('diary');
                   setSidebarOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 rounded-lg ${
-                  mode === 'diary'
+                className={`w-full text-left px-3 py-2 rounded-lg ${mode === 'diary'
                     ? 'bg-slate-900 text-white'
                     : 'text-slate-700 hover:bg-slate-100'
-                }`}
+                  }`}
               >
                 📖 Diary
               </button>
@@ -1207,11 +1202,10 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleVoiceInput}
-                      className={`text-[11px] px-3 py-1 rounded-full border ${
-                        isRecording
+                      className={`text-[11px] px-3 py-1 rounded-full border ${isRecording
                           ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
                           : 'border-slate-300 bg-white text-slate-700'
-                      }`}
+                        }`}
                     >
                       {isRecording ? '🎙 Listening…' : '🎙 Tap to speak'}
                     </button>
@@ -1247,6 +1241,17 @@ export default function Home() {
                       <span className="text-[10px] text-slate-500">
                         Example: EB bill due date, EMI date, renewal, etc.
                       </span>
+                      <div className="mt-2 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={emailImportant}
+                          onChange={(e) => setEmailImportant(e.target.checked)}
+                        />
+                        <span className="text-[11px] text-slate-700">
+                          Send email reminder also (for important things)
+                        </span>
+                      </div>
+
                     </div>
                   </div>
 
@@ -1265,8 +1270,8 @@ export default function Home() {
                       {notifLoading
                         ? 'Updating…'
                         : notificationsEnabled
-                        ? '🔕 Turn off notifications on this device'
-                        : '🔔 Enable reminder notifications on this device'}
+                          ? '🔕 Turn off notifications on this device'
+                          : '🔔 Enable reminder notifications on this device'}
                     </button>
                     <span className="text-[10px] text-slate-500 text-right">
                       This only affects this device. You can enable or turn off reminders
@@ -1316,11 +1321,10 @@ export default function Home() {
                           setShowFavoritesOnly(false);
                           setPage(1);
                         }}
-                        className={`px-3 py-1 ${
-                          !showFavoritesOnly
+                        className={`px-3 py-1 ${!showFavoritesOnly
                             ? 'bg-white shadow text-slate-900'
                             : 'text-slate-600'
-                        }`}
+                          }`}
                       >
                         All
                       </button>
@@ -1329,11 +1333,10 @@ export default function Home() {
                           setShowFavoritesOnly(true);
                           setPage(1);
                         }}
-                        className={`px-3 py-1 ${
-                          showFavoritesOnly
+                        className={`px-3 py-1 ${showFavoritesOnly
                             ? 'bg-white shadow text-slate-900'
                             : 'text-slate-600'
-                        }`}
+                          }`}
                       >
                         ❤️ Favorites
                       </button>
