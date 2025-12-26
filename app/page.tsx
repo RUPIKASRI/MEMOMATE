@@ -405,6 +405,8 @@ export default function Home() {
         tags: tagsArray,
         reminder_at: reminderValue,
         reminder_done: false,
+        email_important: emailImportant,
+        email_sent: false,  
       })
       .select('*')
       .single();
@@ -427,6 +429,7 @@ export default function Home() {
       setNewContent('');
       setNewTags('');
       setNewReminder('');
+      setEmailImportant(false);
     }
     setSaving(false);
   };
