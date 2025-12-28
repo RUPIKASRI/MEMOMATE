@@ -163,7 +163,7 @@ export async function POST() {
   return NextResponse.json({
     ok: true,
     disabled: true,
-    message: "Push reminders temporarily disabled on free plan",
+    message: "Push reminders temporarily disabled on free plans ",
   });
 }
 
